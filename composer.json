@@ -1,0 +1,24 @@
+{
+    "name": "nywerk/media",
+    "description": "Media module for Nywerk platform",
+    "type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+    "autoload": {
+        "psr-4": {
+            "Nywerk\\Media\\": "src/",
+            "Nywerk\\Media\\Tests\\": "tests/",
+            "Nywerk\\Media\\Database\\Factories\\": "database/factories/",
+            "Nywerk\\Media\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Nywerk\\Media\\Providers\\MediaServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
