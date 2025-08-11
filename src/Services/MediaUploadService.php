@@ -38,12 +38,8 @@ class MediaUploadService
         ]);
     }
 
-    /**
-     * Store a Livewire TemporaryUploadedFile into medias and disk, and return the Media model.
-     */
     public function storeFromUploadedFile($uploadedFile): Media
     {
-        // Accept both Livewire TemporaryUploadedFile and Illuminate UploadedFile (testing)
         $originalName = $uploadedFile->getClientOriginalName();
         $extension = $uploadedFile->getClientOriginalExtension();
         $size = $uploadedFile->getSize();

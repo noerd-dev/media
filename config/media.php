@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'disk' => env('MEDIA_DISK', 'images'),
+    'disk' => env('MEDIA_DISK', 'media'),
 ];

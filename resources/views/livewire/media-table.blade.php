@@ -259,7 +259,7 @@ new class extends Component {
             </div>
 
             <div>
-                <div class="grid grid-cols-2 md:grid-cols-2 2xl:grid-cols-6 gap-4 p-4">
+                <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
                     @foreach($rows as $row)
                         <a @if($selectMode) wire:click="chooseMedia({{$row->id}})" @else wire:click="selectMedia({{$row->id}})" @endif
                            @class([
