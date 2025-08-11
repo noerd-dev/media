@@ -1,6 +1,6 @@
 <?php
 
-namespace Nywerk\Media\Repositories;
+namespace Noerd\Media\Repositories;
 
 use Illuminate\Support\Facades\Auth;
 use Nywerk\HarvesterProject\Models\ProjectBooking;

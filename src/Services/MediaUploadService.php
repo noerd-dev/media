@@ -1,12 +1,11 @@
 <?php
 
-namespace Nywerk\Media\Services;
+namespace Noerd\Media\Services;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Nywerk\Media\Models\Media;
+use Noerd\Media\Models\Media;
 
 class MediaUploadService
 {
@@ -21,7 +20,8 @@ class MediaUploadService
         $randomName = Str::random() . '_' . $file['name'];
         $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
-        Storage::disk('images')->put($destinationPath, file_get_contents($file['path']));
+        $disk = config('media.disk');
+        Storage::disk($disk)->put($destinationPath, file_get_contents($file['path']));
 
         $previewPath = $this->imagePreviewService->createPreviewForFile($file, $destinationPath);
 
@@ -32,7 +32,7 @@ class MediaUploadService
             'name' => $file['name'],
             'extension' => $file['extension'],
             'size' => $file['size'],
-            'disk' => 'images',
+            'disk' => $disk,
             'ai_access' => true,
             'thumbnail' => $previewPath ?? null,
         ]);
@@ -51,8 +51,9 @@ class MediaUploadService
         $randomName = Str::random() . '_' . $originalName;
         $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
+        $disk = config('media.disk');
         $stream = fopen($uploadedFile->getRealPath(), 'r');
-        Storage::disk('images')->put($destinationPath, $stream);
+        Storage::disk($disk)->put($destinationPath, $stream);
         if (is_resource($stream)) {
             fclose($stream);
         }
@@ -71,7 +72,7 @@ class MediaUploadService
             'name' => $originalName,
             'extension' => $extension,
             'size' => $size,
-            'disk' => 'images',
+            'disk' => $disk,
             'ai_access' => true,
             'thumbnail' => $previewPath ?? null,
         ]);
@@ -83,7 +84,8 @@ class MediaUploadService
     public function publicUrl(Media $media): string
     {
         /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
-        $disk = Storage::disk('images');
+        $disk = Storage::disk(config('media.disk'));
+
         return $disk->url($media->path);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Nywerk\Media\Models;
+namespace Noerd\Media\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

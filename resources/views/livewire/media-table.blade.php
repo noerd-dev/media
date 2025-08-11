@@ -1,10 +1,10 @@
 <?php
 
 use Livewire\Volt\Component;
-use Nywerk\Media\Models\Media;
-use Nywerk\Media\Models\MediaLabel;
-use Nywerk\Media\Services\ImagePreviewService;
-use Nywerk\Media\Services\MediaUploadService;
+use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaLabel;
+use Noerd\Media\Services\ImagePreviewService;
+use Noerd\Media\Services\MediaUploadService;
 use Noerd\Noerd\Traits\Noerd;
 use Nywerk\Uki\Models\TextDocument;
 use Spatie\PdfToText\Pdf;
@@ -142,7 +142,7 @@ new class extends Component {
         return;
 
         // Not working yet because of GS issues when running in a job
-        $ocrSevice = app()->make(\Nywerk\Media\Services\OcrService::class);
+        $ocrSevice = app()->make(\Noerd\Media\Services\OcrService::class);
 
 
         $path = Storage::disk($this->selected->disk)->path($this->selected->path);

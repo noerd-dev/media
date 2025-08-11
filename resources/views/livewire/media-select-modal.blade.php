@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Noerd\Noerd\Traits\Noerd;
-use Nywerk\Media\Models\Media;
+use Noerd\Media\Models\Media;
 use Noerd\Noerd\Helpers\StaticConfigHelper;
 
 new class extends Component {

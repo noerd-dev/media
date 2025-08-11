@@ -4,8 +4,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Noerd\Models\User;
-use Nywerk\Media\Models\Media as MediaModel;
-use Nywerk\Media\Services\MediaUploadService;
+use Noerd\Media\Models\Media as MediaModel;
+use Noerd\Media\Services\MediaUploadService;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
