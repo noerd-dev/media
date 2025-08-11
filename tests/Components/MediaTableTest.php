@@ -4,8 +4,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use Noerd\Noerd\Models\User;
-use Nywerk\Media\Models\Media;
-use Nywerk\Media\Models\MediaLabel;
+use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaLabel;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -106,7 +106,7 @@ it('filters media by multiple labels (AND)', function (): void {
         ->set('filterLabelIds', [$labelA->id, $labelB->id]);
 
     $rows = $component->viewData('rows');
-    $ids = collect($rows->items())->pluck('id');
+    $ids = collect($rows)->pluck('id');
 
     expect($ids)->toContain($m3->id);
     expect($ids)->not->toContain($m1->id);

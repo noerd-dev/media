@@ -1,10 +1,10 @@
 <?php
 
-namespace Nywerk\Media\Providers;
+namespace Noerd\Media\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
-use Nywerk\Media\Middleware\MediaMiddleware;
+use Noerd\Media\Middleware\MediaMiddleware;
 
 class MediaServiceProvider extends ServiceProvider
 {
@@ -15,6 +15,9 @@ class MediaServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'media');
         $this->loadRoutesFrom(__DIR__ . '/../../routes/media-routes.php');
+
+        // Publish/merge configuration
+        $this->mergeConfigFrom(__DIR__ . '/../../config/media.php', 'media');
 
         $router = $this->app['router'];
         $router->aliasMiddleware('media', MediaMiddleware::class);

@@ -1,6 +1,6 @@
 <?php
 
-namespace Nywerk\Media\Services;
+namespace Noerd\Media\Services;
 
 use Alimranahmed\LaraOCR\Facades\OCR;
 use Exception;
