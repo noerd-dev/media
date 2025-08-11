@@ -6,7 +6,8 @@
 	"license": "proprietary",
 	"require": {
         "noerd/noerd":  "^1.0",
-        "dasundev/livewire-dropzone": "^2.0"
+        "dasundev/livewire-dropzone": "^2.0",
+        "intervention/image": "^3.11"
     },
     "autoload": {
         "psr-4": {
