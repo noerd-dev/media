@@ -2,9 +2,9 @@
 
 namespace Noerd\Media\Services;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
@@ -16,7 +16,7 @@ class ImagePreviewService
         $disk = config('media.disk', 'images');
         $path = Storage::disk($disk)->path($destinationPath);
 
-        $extension = strtolower($file['extension'] ?? '');
+        $extension = mb_strtolower($file['extension'] ?? '');
         if (in_array($extension, ['png', 'jpg', 'jpeg', 'webp'])) {
             $image = $manager->read($path);
 
