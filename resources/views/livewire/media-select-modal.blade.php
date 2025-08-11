@@ -13,10 +13,11 @@ new class extends Component {
     public const COMPONENT = 'media-select-modal';
 
     public $context; // e.g., field name to set in collection-component
+    public $token;   // unique token to scope the selection event to the opener
 
     public function tableAction(mixed $modelId): void
     {
-        $this->dispatch('mediaSelected', $modelId, $this->context);
+        $this->dispatch('mediaSelected', $modelId, $this->context, $this->token);
         $this->dispatch('close-modal-' . self::COMPONENT);
     }
 
@@ -46,7 +47,7 @@ new class extends Component {
     </x-slot:header>
 
     <div class="flex-1 overflow-y-auto p-4">
-        <livewire:media-table :hideDetail="true" :selectMode="true" :selectContext="$context"/>
+        <livewire:media-table :hideDetail="true" :selectMode="true" :selectContext="$context" :selectToken="$token"/>
     </div>
 </x-noerd::page>
 
