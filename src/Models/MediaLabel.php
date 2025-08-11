@@ -19,5 +19,3 @@ class MediaLabel extends Model
         return $this->belongsToMany(Media::class, 'media_label_media');
     }
 }
-
-

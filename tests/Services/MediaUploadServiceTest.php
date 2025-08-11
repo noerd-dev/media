@@ -3,9 +3,9 @@
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Noerd\Noerd\Models\User;
 use Noerd\Media\Models\Media as MediaModel;
 use Noerd\Media\Services\MediaUploadService;
+use Noerd\Noerd\Models\User;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -61,5 +61,3 @@ it('stores media from array payload (dropzone style)', function (): void {
     expect(Storage::disk('images')->exists($media->path))->toBeTrue();
     expect(Storage::disk('images')->exists($media->thumbnail))->toBeTrue();
 });
-
-

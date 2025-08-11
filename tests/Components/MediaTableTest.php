@@ -3,9 +3,9 @@
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
-use Noerd\Noerd\Models\User;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaLabel;
+use Noerd\Noerd\Models\User;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -127,5 +127,3 @@ it('deletes media and removes file from disk', function (): void {
     expect(Media::find($media->id))->toBeNull();
     expect(Storage::disk('images')->exists($path))->toBeFalse();
 });
-
-

@@ -89,5 +89,3 @@ class MediaUploadService
         return $disk->url($media->path);
     }
 }
-
-
