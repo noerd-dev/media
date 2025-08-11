@@ -15,22 +15,22 @@ Das Media Modul stellt eine Medienbibliothek mit Upload, Thumbnails/Previews, La
 - Für PDF-Preview: `Imagick` inkl. Ghostscript (optional)
 
 ### Konfiguration
-1) In `config/filesystems.php` die Disk `images` hinzufügen:
+1) In `config/filesystems.php` die Disk `media` hinzufügen:
 
 ```php
-'images' => [
-    'driver' => 'local',
-    'root' => storage_path('app/public/images'),
-    'url' => env('APP_URL') . '/storage/images',
-    'visibility' => 'public',
-    'throw' => false,
-],
+ 'media' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/media'),
+            'url' => env('APP_URL') . '/storage/media',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
 ```
 
 2) ENV setzen:
 
 ```env
-MEDIA_DISK=images
+MEDIA_DISK=media
 APP_URL=https://example.test
 ```
 
@@ -40,7 +40,7 @@ APP_URL=https://example.test
 
 ```php
 return [
-    'disk' => env('MEDIA_DISK', 'images'),
+    'disk' => env('MEDIA_DISK', 'media'),
 ];
 ```
 

@@ -13,7 +13,7 @@ class ImagePreviewService
     public function createPreviewForFile(array $file, string $destinationPath): ?string
     {
         $manager = new ImageManager(new Driver());
-        $disk = config('media.disk', 'images');
+        $disk = config('media.disk');
         $path = Storage::disk($disk)->path($destinationPath);
 
         $extension = mb_strtolower($file['extension'] ?? '');
