@@ -1,0 +1,8 @@
+- title: Pdm
+  name: pdm
+  hidden: true
+  route: "pdm"
+  block_menus: [
+   # { title: 'Bilder', route: 'media.images', heroicon: 'photo' },
+   # { title: 'Dateien', route: 'media.files', heroicon: 'document-plus' },
+  ]
