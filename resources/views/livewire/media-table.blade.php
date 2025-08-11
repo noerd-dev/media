@@ -27,6 +27,7 @@ new class extends Component {
     public bool $hideDetail = false;
     public bool $selectMode = false;
     public ?string $selectContext = null;
+    public ?string $selectToken = null;
 
     public function tableAction(mixed $modelId = null, mixed $relationId = null): void
     {
@@ -133,7 +134,7 @@ new class extends Component {
         if (!$this->selectMode) {
             return;
         }
-        $this->dispatch('mediaSelected', $id, $this->selectContext);
+        $this->dispatch('mediaSelected', $id, $this->selectContext, $this->selectToken);
         $this->dispatch('close-modal-media-select-modal');
     }
 
