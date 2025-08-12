@@ -10,7 +10,7 @@ use Noerd\Noerd\Models\User;
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function (): void {
-    Storage::fake('images');
+    Storage::fake('media');
 });
 
 it('stores media from uploaded file and creates thumbnail', function (): void {
@@ -23,14 +23,14 @@ it('stores media from uploaded file and creates thumbnail', function (): void {
     $media = $service->storeFromUploadedFile($fakeImage);
 
     expect($media->tenant_id)->toBe($user->selected_tenant_id)
-        ->and($media->disk)->toBe('images')
+        ->and($media->disk)->toBe('media')
         ->and($media->name)->toBe('test.jpg')
         ->and($media->extension)->toBe('jpg')
         ->and($media->path)->not->toBe('')
         ->and($media->thumbnail)->not->toBeNull();
 
-    expect(Storage::disk('images')->exists($media->path))->toBeTrue();
-    expect(Storage::disk('images')->exists($media->thumbnail))->toBeTrue();
+    expect(Storage::disk('media')->exists($media->path))->toBeTrue();
+    expect(Storage::disk('media')->exists($media->thumbnail))->toBeTrue();
 });
 
 it('stores media from array payload (dropzone style)', function (): void {
@@ -52,12 +52,12 @@ it('stores media from array payload (dropzone style)', function (): void {
 
     expect(MediaModel::count())->toBe($before + 1);
     expect($media->tenant_id)->toBe($user->selected_tenant_id)
-        ->and($media->disk)->toBe('images')
+        ->and($media->disk)->toBe('media')
         ->and($media->name)->toBe('photo.jpg')
         ->and($media->extension)->toBe('jpg')
         ->and($media->path)->not->toBe('')
         ->and($media->thumbnail)->not->toBeNull();
 
-    expect(Storage::disk('images')->exists($media->path))->toBeTrue();
-    expect(Storage::disk('images')->exists($media->thumbnail))->toBeTrue();
+    expect(Storage::disk('media')->exists($media->path))->toBeTrue();
+    expect(Storage::disk('media')->exists($media->thumbnail))->toBeTrue();
 });
