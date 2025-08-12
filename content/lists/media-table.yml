@@ -1,0 +1,18 @@
+title: Medien
+newLabel: 'Neue Mediendatei'
+component: media-component
+disableSearch: false
+redirectAction: ''
+columns:
+  -
+    field: filename
+    label: Dateiname
+    width: 30
+  -
+    field: type
+    label: Type
+    width: 15
+  -
+    field: size
+    label: Größe
+    width: 10
