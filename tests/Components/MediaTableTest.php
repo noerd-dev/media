@@ -50,7 +50,6 @@ it('can add, attach and detach labels for selected media', function (): void {
         'path' => $this->user->selected_tenant_id . '/bar.jpg',
         'disk' => 'media',
         'size' => 99,
-        'ai_access' => true,
     ]);
 
     $component = Volt::test('media-table')
@@ -84,21 +83,21 @@ it('filters media by multiple labels (AND)', function (): void {
     // Media 1: A only
     $m1 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m1.jpg', 'disk' => 'media', 'size' => 1, 'ai_access' => true,
+        'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m1.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m1->labels()->sync([$labelA->id]);
 
     // Media 2: B only
     $m2 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m2.jpg', 'disk' => 'media', 'size' => 1, 'ai_access' => true,
+        'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m2.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m2->labels()->sync([$labelB->id]);
 
     // Media 3: A and B
     $m3 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m3.jpg', 'disk' => 'media', 'size' => 1, 'ai_access' => true,
+        'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m3.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m3->labels()->sync([$labelA->id, $labelB->id]);
 
@@ -119,7 +118,7 @@ it('deletes media and removes file from disk', function (): void {
 
     $media = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1, 'ai_access' => true,
+        'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1,
     ]);
 
     Volt::test('media-table')->call('deleteMedia', $media->id);
