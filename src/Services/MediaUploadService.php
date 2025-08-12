@@ -33,7 +33,6 @@ class MediaUploadService
             'extension' => $file['extension'],
             'size' => $file['size'],
             'disk' => $disk,
-            'ai_access' => true,
             'thumbnail' => $previewPath ?? null,
         ]);
     }
@@ -69,7 +68,6 @@ class MediaUploadService
             'extension' => $extension,
             'size' => $size,
             'disk' => $disk,
-            'ai_access' => true,
             'thumbnail' => $previewPath ?? null,
         ]);
     }
