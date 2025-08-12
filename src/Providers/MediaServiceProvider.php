@@ -5,6 +5,7 @@ namespace Noerd\Media\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
 use Noerd\Media\Middleware\MediaMiddleware;
+use Noerd\Media\Commands\NoerdMediaInstallCommand;
 
 class MediaServiceProvider extends ServiceProvider
 {
@@ -23,5 +24,11 @@ class MediaServiceProvider extends ServiceProvider
         $router->aliasMiddleware('media', MediaMiddleware::class);
 
         Volt::mount(__DIR__ . '/../../resources/views/livewire');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                NoerdMediaInstallCommand::class,
+            ]);
+        }
     }
 }

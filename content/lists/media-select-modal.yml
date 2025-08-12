@@ -1,0 +1,9 @@
+title: Medien auswählen
+search: true
+columns:
+  - { label: ID, field: id, width: 10 }
+  - { label: Name, field: name, width: 40 }
+  - { label: Typ, field: type, width: 20 }
+  - { label: Größe, field: size, width: 20 }
+  - { label: Erstellt, field: created_at, width: 20 }
+
