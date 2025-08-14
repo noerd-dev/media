@@ -1,4 +1,4 @@
-## Media Module
+## Media Module 3
 
 Das Media Modul stellt eine Medienbibliothek mit Upload, Thumbnails/Previews, Labeling/Filterung und einer Auswahl-Modal bereit.
 
