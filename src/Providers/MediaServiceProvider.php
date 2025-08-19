@@ -4,8 +4,8 @@ namespace Noerd\Media\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
-use Noerd\Media\Middleware\MediaMiddleware;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
+use Noerd\Media\Middleware\MediaMiddleware;
 
 class MediaServiceProvider extends ServiceProvider
 {

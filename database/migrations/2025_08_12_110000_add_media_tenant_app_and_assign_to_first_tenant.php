@@ -45,5 +45,3 @@ return new class () extends Migration {
         // do not remove app or assignment in down to avoid accidental data loss
     }
 };
-
-
