@@ -47,3 +47,4 @@ return new class () extends Migration {
         // No destructive down to avoid dropping existing media data
     }
 };
+
