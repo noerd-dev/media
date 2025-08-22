@@ -137,4 +137,3 @@ class NoerdMediaInstallCommand extends Command
         return $a;
     }
 }
-
