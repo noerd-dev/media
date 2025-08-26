@@ -31,8 +31,16 @@
     "of": "von",
     "results": "Ergebnisse",
     "Select Media": "Medien auswählen",
-    "to": "bis"
+    "to": "bis",
+    "Filter by labels:": "Nach Labels filtern:",
+    "Clear filters": "Filter entfernen",
+    "No labels": "Keine Labels",
+    "Add new label…": "Neues Label hinzufügen…",
+    "Press Enter to add": "Drücke Enter zum Hinzufügen",
+    "Existing labels": "Vorhandene Labels",
+    "Really delete?": "Wirklich löschen?"
 }
+
 
 
 

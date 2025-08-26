@@ -239,7 +239,7 @@ new class extends Component {
             <div class="p-4 pt-2">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-sm text-gray-600 mr-2">
-                        Nach Labels filtern:
+                        {{ __('Filter by labels:') }}
                     </span>
                     @if(isset($labels))
                         @foreach($labels as $label)
@@ -254,7 +254,7 @@ new class extends Component {
                     <button type="button"
                             class="text-sm ml-auto text-gray-600 hover:text-black"
                             wire:click="clearFilters">
-                        Filter entfernen
+                        {{ __('Clear filters') }}
                     </button>
                 </div>
             </div>
@@ -321,7 +321,7 @@ new class extends Component {
                             </span>
                         @endforeach
                         @if(($selected->labels ?? collect())->isEmpty())
-                            <span class="text-gray-500">Keine Labels</span>
+                            <span class="text-gray-500">{{ __('No labels') }}</span>
                         @endif
                     </div>
 
@@ -329,14 +329,14 @@ new class extends Component {
                         <input type="text"
                                wire:model.defer="labelName"
                                wire:keydown.enter.prevent="addLabel"
-                               placeholder="Neues Label hinzufügen…"
+                               placeholder="{{ __('Add new label…') }}"
                                class="w-full border rounded px-3 py-2"/>
-                        <div class="text-xs text-gray-500 mt-1">Drücke Enter zum Hinzufügen</div>
+                        <div class="text-xs text-gray-500 mt-1">{{ __('Press Enter to add') }}</div>
                     </div>
 
                     @if(isset($labels) && $labels->count() > 0)
                         <div class="mt-3">
-                            <div class="text-sm text-gray-600 mb-1">Vorhandene Labels</div>
+                            <div class="text-sm text-gray-600 mb-1">{{ __('Existing labels') }}</div>
                             <div class="flex flex-wrap gap-2 max-h-32 overflow-auto">
                                 @foreach($labels as $label)
                                     @if(!($selected->labels ?? collect())->pluck('id')->contains($label->id))
@@ -353,9 +353,9 @@ new class extends Component {
                 </div>
 
                 <div class="pt-4">
-                    <x-noerd::buttons.delete wire:confirm="Wirklich löschen?"
+                    <x-noerd::buttons.delete wire:confirm="{{ __('Really delete?') }}"
                                              wire:click="deleteMedia({{$selected->id}})">
-                        Löschen
+                        {{ __('Delete') }}
                     </x-noerd::buttons.delete>
                 </div>
 
