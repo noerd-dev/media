@@ -3,7 +3,6 @@
 use Livewire\Volt\Component;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaLabel;
-use Noerd\Media\Services\ImagePreviewService;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Noerd\Traits\Noerd;
 use Nywerk\Uki\Models\TextDocument;
@@ -11,7 +10,6 @@ use Spatie\PdfToText\Pdf;
 use Noerd\Noerd\Helpers\StaticConfigHelper;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 new class extends Component {
 
@@ -31,8 +29,6 @@ new class extends Component {
 
     public function tableAction(mixed $modelId = null, mixed $relationId = null): void
     {
-
-
         $this->dispatch(
             event: 'noerdModal',
             component: 'media-component',
@@ -145,7 +141,6 @@ new class extends Component {
         // Not working yet because of GS issues when running in a job
         $ocrSevice = app()->make(\Noerd\Media\Services\OcrService::class);
 
-
         $path = Storage::disk($this->selected->disk)->path($this->selected->path);
         $ocrSevice->parseWithOCR($path);
 
@@ -233,7 +228,8 @@ new class extends Component {
                     wire:model.live="files"
                     :rules="['mimes:png,jpg,jpeg,pdf,txt','max:10420']"
                     :key="'files'"
-                    :multiple="true"/>
+                    :multiple="true"
+                />
             </div>
 
             <div class="p-4 pt-2">
