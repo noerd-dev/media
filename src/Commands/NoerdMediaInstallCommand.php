@@ -48,9 +48,6 @@ class NoerdMediaInstallCommand extends Command
 
             $this->displaySummary($results);
 
-            // Register the Media module
-            $this->registerModule();
-
             $this->info('Noerd Media content successfully installed!');
             return 0;
         } catch (Exception $e) {
@@ -117,54 +114,6 @@ class NoerdMediaInstallCommand extends Command
         }
 
         return $results;
-    }
-
-    /**
-     * Register the Media module
-     */
-    private function registerModule(): void
-    {
-        $this->line('');
-        $this->info('Registering Media module...');
-
-        try {
-            // Install the Media package explicitly to trigger package discovery
-            $this->line('<comment>Installing Media package via composer...</comment>');
-            exec('cd ' . base_path() . ' && composer require noerd/media', $output, $returnCode);
-
-            if ($returnCode !== 0) {
-                $this->warn('Failed to install noerd/media package. Output: ' . implode("\n", $output));
-                $this->warn('You may need to run "composer require noerd/media" manually.');
-            } else {
-                $this->line('<info>Media package installed successfully.</info>');
-            }
-
-            // Run composer dump-autoload to ensure the module is discoverable
-            $this->line('<comment>Running composer dump-autoload...</comment>');
-            exec('cd ' . base_path() . ' && composer dump-autoload', $output, $returnCode);
-
-            if ($returnCode !== 0) {
-                $this->warn('Failed to run composer dump-autoload automatically. Please run it manually.');
-            } else {
-                $this->line('<info>Autoloader refreshed successfully.</info>');
-            }
-
-            // Clear Laravel's cached services to ensure service provider discovery
-            $this->line('<comment>Clearing Laravel caches...</comment>');
-            Artisan::call('config:clear');
-            Artisan::call('cache:clear');
-
-            // Clear the cached services to force re-discovery of service providers
-            $servicesPath = base_path('bootstrap/cache/services.php');
-            if (file_exists($servicesPath)) {
-                unlink($servicesPath);
-                $this->line('<info>Cleared cached services file.</info>');
-            }
-
-            $this->line('<info>Media module registered successfully.</info>');
-        } catch (Exception $e) {
-            $this->warn('Module registration may need manual intervention: ' . $e->getMessage());
-        }
     }
 
     private function displaySummary(array $results): void
