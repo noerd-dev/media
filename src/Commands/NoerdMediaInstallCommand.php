@@ -18,7 +18,7 @@ class NoerdMediaInstallCommand extends Command
         $this->info('Installing noerd media content...');
 
         $sourceDir = base_path('vendor/noerd/media/content');
-        $targetDir = storage_path('environment');
+        $targetDir = base_path('content');
 
         if (!is_dir($sourceDir)) {
             $this->error("Source directory not found: {$sourceDir}");
