@@ -47,7 +47,7 @@ new class extends Component {
     </x-slot:header>
 
     <div class="flex-1 overflow-y-auto p-4">
-        <livewire:media-table :hideDetail="true" :selectMode="true" :selectContext="$context" :selectToken="$token"/>
+        <livewire:media-list :hideDetail="true" :selectMode="true" :selectContext="$context" :selectToken="$token"/>
     </div>
 </x-noerd::page>
 

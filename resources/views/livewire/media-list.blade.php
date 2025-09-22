@@ -15,7 +15,7 @@ new class extends Component {
 
     use Noerd;
 
-    public const COMPONENT = 'media-table';
+    public const COMPONENT = 'media-list';
 
     public array $files = [];
     public ?Media $selected = null;
@@ -31,7 +31,7 @@ new class extends Component {
     {
         $this->dispatch(
             event: 'noerdModal',
-            component: 'media-component',
+            component: 'media-detail',
             source: self::COMPONENT,
             arguments: ['modelId' => $modelId, 'relationId' => $relationId],
         );
@@ -58,7 +58,7 @@ new class extends Component {
         $totalCount = (clone $baseQuery)->count();
         $rows = (clone $baseQuery)->limit($this->perPage)->get();
 
-        $tableConfig = StaticConfigHelper::getTableConfig('media-table');
+        $tableConfig = StaticConfigHelper::getTableConfig('media-list');
 
         $labels = MediaLabel::where('tenant_id', Auth::user()->selected_tenant_id)
             ->orderBy('name')

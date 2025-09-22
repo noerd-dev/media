@@ -30,7 +30,7 @@ it('stores uploaded files via service when calling store()', function (): void {
 
     $before = Media::count();
 
-    Volt::test('media-table')
+    Volt::test('media-list')
         ->set('files', [$filePayload])
         ->call('store');
 
@@ -52,7 +52,7 @@ it('can add, attach and detach labels for selected media', function (): void {
         'size' => 99,
     ]);
 
-    $component = Volt::test('media-table')
+    $component = Volt::test('media-list')
         ->call('selectMedia', $media->id)
         ->set('labelName', 'TestLabel')
         ->call('addLabel');
@@ -101,7 +101,7 @@ it('filters media by multiple labels (AND)', function (): void {
     ]);
     $m3->labels()->sync([$labelA->id, $labelB->id]);
 
-    $component = Volt::test('media-table')
+    $component = Volt::test('media-list')
         ->set('filterLabelIds', [$labelA->id, $labelB->id]);
 
     $rows = $component->viewData('rows');
@@ -121,7 +121,7 @@ it('deletes media and removes file from disk', function (): void {
         'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1,
     ]);
 
-    Volt::test('media-table')->call('deleteMedia', $media->id);
+    Volt::test('media-list')->call('deleteMedia', $media->id);
 
     expect(Media::find($media->id))->toBeNull();
     expect(Storage::disk('media')->exists($path))->toBeFalse();

@@ -7,5 +7,5 @@ Route::prefix('media')
     ->as('media.')
     ->middleware(['auth', 'verified', 'web', 'media'])
     ->group(function (): void {
-        Volt::route('/dashboard', 'media-table')->name('dashboard');
+        Volt::route('/dashboard', 'media-list')->name('dashboard');
     });

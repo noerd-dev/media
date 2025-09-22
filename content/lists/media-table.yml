@@ -1,6 +1,6 @@
 title: Medien
 newLabel: 'Neue Mediendatei'
-component: media-component
+component: media-detail
 disableSearch: false
 redirectAction: ''
 columns:
