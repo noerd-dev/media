@@ -14,7 +14,7 @@ beforeEach(function (): void {
 });
 
 it('stores media from uploaded file and creates thumbnail', function (): void {
-    $user = User::factory()->withContentModule()->create();
+    $user = User::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
@@ -34,7 +34,7 @@ it('stores media from uploaded file and creates thumbnail', function (): void {
 });
 
 it('stores media from array payload (dropzone style)', function (): void {
-    $user = User::factory()->withContentModule()->create();
+    $user = User::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
