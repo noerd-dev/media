@@ -17,7 +17,7 @@ class MediaMiddleware
     {
         session(['currentApp' => 'MEDIA']);
 
-        $hasAppActive = auth()->user()->selectedTenant()->tenantApps()->where('name', 'MEDIA')->count();
+        $hasAppActive = auth()->user()->selectedTenant()->tenantApps()?->where('name', 'MEDIA')->count();
         if ($hasAppActive === 0) {
             return redirect('/');
         }
