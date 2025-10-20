@@ -226,7 +226,7 @@ new class extends Component {
             <div class="pt-8">
                 <livewire:dropzone
                     wire:model.live="files"
-                    :rules="['mimes:png,jpg,jpeg,pdf,txt,webp','max:10420']"
+                    :rules="['mimes:png,jpg,jpeg,pdf,txt,webp,svg','max:10420']"
                     :key="'files'"
                     :multiple="true"
                 />
