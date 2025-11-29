@@ -4,10 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (!Schema::hasTable('medias')) {
+        if (! Schema::hasTable('medias')) {
             Schema::create('medias', function (Blueprint $table): void {
                 $table->id();
                 $table->unsignedBigInteger('tenant_id');
@@ -26,16 +27,16 @@ return new class () extends Migration {
         } else {
             // Ensure missing columns exist (idempotent adjustments)
             Schema::table('medias', function (Blueprint $table): void {
-                if (!Schema::hasColumn('medias', 'ocr_text')) {
+                if (! Schema::hasColumn('medias', 'ocr_text')) {
                     $table->longText('ocr_text')->nullable();
                 }
-                if (!Schema::hasColumn('medias', 'thumbnail')) {
+                if (! Schema::hasColumn('medias', 'thumbnail')) {
                     $table->string('thumbnail')->nullable();
                 }
-                if (!Schema::hasColumn('medias', 'disk')) {
+                if (! Schema::hasColumn('medias', 'disk')) {
                     $table->string('disk')->default(config('media.disk', 'media'));
                 }
-                if (!Schema::hasColumn('medias', 'size')) {
+                if (! Schema::hasColumn('medias', 'size')) {
                     $table->unsignedBigInteger('size')->default(0);
                 }
             });

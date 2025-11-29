@@ -13,18 +13,18 @@ class MediaServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
-        $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'media');
-        $this->loadTranslationsFrom(__DIR__ . '/../../resources/lang', 'media');
-        $this->loadRoutesFrom(__DIR__ . '/../../routes/media-routes.php');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'media');
+        $this->loadTranslationsFrom(__DIR__.'/../../resources/lang', 'media');
+        $this->loadRoutesFrom(__DIR__.'/../../routes/media-routes.php');
 
         // Publish/merge configuration
-        $this->mergeConfigFrom(__DIR__ . '/../../config/media.php', 'media');
+        $this->mergeConfigFrom(__DIR__.'/../../config/media.php', 'media');
 
         $router = $this->app['router'];
         $router->aliasMiddleware('media', MediaMiddleware::class);
 
-        Volt::mount(__DIR__ . '/../../resources/views/livewire');
+        Volt::mount(__DIR__.'/../../resources/views/livewire');
 
         if ($this->app->runningInConsole()) {
             $this->commands([

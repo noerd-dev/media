@@ -3,12 +3,13 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         // Create MEDIA app if it does not exist
         $exists = DB::table('tenant_apps')->where('name', 'MEDIA')->exists();
-        if (!$exists) {
+        if (! $exists) {
             DB::table('tenant_apps')->insert([
                 'title' => 'Media',
                 'name' => 'MEDIA',
@@ -29,7 +30,7 @@ return new class () extends Migration {
                 ->where('tenant_id', $tenantId)
                 ->where('tenant_app_id', $appId)
                 ->exists();
-            if (!$existsPivot) {
+            if (! $existsPivot) {
                 DB::table($pivotTable)->insert([
                     'tenant_id' => $tenantId,
                     'tenant_app_id' => $appId,
