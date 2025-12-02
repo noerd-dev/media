@@ -4,7 +4,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use Noerd\Media\Models\Media;
-use Noerd\Media\Models\MediaLabel;
+use Noerd\Media\Models\MediaTag;
 use Noerd\Noerd\Models\User;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
@@ -41,7 +41,7 @@ it('stores uploaded files via service when calling store()', function (): void {
         ->and(Storage::disk('media')->exists($media->path))->toBeTrue();
 });
 
-it('can add, attach and detach labels for selected media', function (): void {
+it('can add, attach and detach tags for selected media', function (): void {
     $media = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
         'type' => 'image',
@@ -54,55 +54,54 @@ it('can add, attach and detach labels for selected media', function (): void {
 
     $component = Volt::test('media-list')
         ->call('selectMedia', $media->id)
-        ->set('labelName', 'TestLabel')
-        ->call('addLabel');
+        ->call('addOrAttachTag', 'TestTag');
 
-    $label = MediaLabel::where('tenant_id', $this->user->selected_tenant_id)->where('name', 'TestLabel')->first();
-    expect($label)->not->toBeNull();
-    expect($media->fresh()->labels()->pluck('name'))->toContain('TestLabel');
+    $tag = MediaTag::where('tenant_id', $this->user->selected_tenant_id)->where('name', 'TestTag')->first();
+    expect($tag)->not->toBeNull();
+    expect($media->fresh()->tags()->pluck('name'))->toContain('TestTag');
 
-    // Attach existing different label
-    $existing = MediaLabel::firstOrCreate([
+    // Attach existing different tag
+    $existing = MediaTag::firstOrCreate([
         'tenant_id' => $this->user->selected_tenant_id,
-        'name' => 'AnotherLabel',
+        'name' => 'AnotherTag',
     ]);
 
-    $component->call('attachLabel', $existing->id);
-    expect($media->fresh()->labels()->pluck('name'))->toContain('AnotherLabel');
+    $component->call('attachTag', $existing->id);
+    expect($media->fresh()->tags()->pluck('name'))->toContain('AnotherTag');
 
     // Detach
-    $component->call('detachLabel', $existing->id);
-    expect($media->fresh()->labels()->pluck('name'))->not->toContain('AnotherLabel');
+    $component->call('detachTag', $existing->id);
+    expect($media->fresh()->tags()->pluck('name'))->not->toContain('AnotherTag');
 });
 
-it('filters media by multiple labels (AND)', function (): void {
-    // Create labels
-    $labelA = MediaLabel::create(['tenant_id' => $this->user->selected_tenant_id, 'name' => 'A']);
-    $labelB = MediaLabel::create(['tenant_id' => $this->user->selected_tenant_id, 'name' => 'B']);
+it('filters media by multiple tags (AND)', function (): void {
+    // Create tags
+    $tagA = MediaTag::create(['tenant_id' => $this->user->selected_tenant_id, 'name' => 'A']);
+    $tagB = MediaTag::create(['tenant_id' => $this->user->selected_tenant_id, 'name' => 'B']);
 
     // Media 1: A only
     $m1 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
         'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m1.jpg', 'disk' => 'media', 'size' => 1,
     ]);
-    $m1->labels()->sync([$labelA->id]);
+    $m1->tags()->sync([$tagA->id]);
 
     // Media 2: B only
     $m2 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
         'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m2.jpg', 'disk' => 'media', 'size' => 1,
     ]);
-    $m2->labels()->sync([$labelB->id]);
+    $m2->tags()->sync([$tagB->id]);
 
     // Media 3: A and B
     $m3 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
         'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m3.jpg', 'disk' => 'media', 'size' => 1,
     ]);
-    $m3->labels()->sync([$labelA->id, $labelB->id]);
+    $m3->tags()->sync([$tagA->id, $tagB->id]);
 
     $component = Volt::test('media-list')
-        ->set('filterLabelIds', [$labelA->id, $labelB->id]);
+        ->set('filterTagIds', [$tagA->id, $tagB->id]);
 
     $rows = $component->viewData('rows');
     $ids = collect($rows)->pluck('id');

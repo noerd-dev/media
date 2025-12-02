@@ -32,12 +32,15 @@
     "results": "Ergebnisse",
     "Select Media": "Medien auswählen",
     "to": "bis",
-    "Filter by labels:": "Nach Labels filtern:",
+    "Filter by tags:": "Nach Tags filtern:",
     "Clear filters": "Filter entfernen",
-    "No labels": "Keine Labels",
-    "Add new label…": "Neues Label hinzufügen…",
+    "No tags": "Keine Tags",
+    "Add new tag…": "Neues Tag hinzufügen…",
     "Press Enter to add": "Drücke Enter zum Hinzufügen",
-    "Existing labels": "Vorhandene Labels",
+    "Press Enter to create new tag": "Drücke Enter, um ein neues Tag zu erstellen",
+    "Type to search or press Enter to add": "Tippen zum Suchen oder Enter zum Hinzufügen",
+    "Existing tags": "Vorhandene Tags",
+    "Tags": "Tags",
     "Really delete?": "Wirklich löschen?"
 }
 

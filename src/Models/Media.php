@@ -21,9 +21,9 @@ class Media extends Model
         return $this->hasOne(TextDocument::class);
     }
 
-    public function labels(): BelongsToMany
+    public function tags(): BelongsToMany
     {
-        return $this->belongsToMany(MediaLabel::class, 'media_label_media');
+        return $this->belongsToMany(MediaTag::class, 'media_tag_media');
     }
 
     protected static function newFactory(): MediaFactory
