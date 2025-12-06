@@ -1,0 +1,6 @@
+- title: Media
+  name: media
+  route: "media"
+  block_menus: [
+    { title: 'Media', route: 'media.dashboard', heroicon: 'photo' },
+  ]
