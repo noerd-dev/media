@@ -46,14 +46,6 @@ class NoerdMediaInstallCommand extends Command
         try {
             $results = $this->copyDirectoryContents($sourceDir, $targetDir);
 
-            // Ensure lists are copied explicitly to content/lists
-            $listsSource = $sourceDir . DIRECTORY_SEPARATOR . 'lists';
-            $listsTarget = $targetDir . DIRECTORY_SEPARATOR . 'lists';
-            if (is_dir($listsSource)) {
-                $listResults = $this->copyDirectoryContents($listsSource, $listsTarget);
-                $results = $this->mergeResults($results, $listResults);
-            }
-
             $this->displaySummary($results);
 
             $this->info('Noerd Media content successfully installed!');
@@ -140,14 +132,5 @@ class NoerdMediaInstallCommand extends Command
                 ['Files skipped', $results['skipped_files']],
             ],
         );
-    }
-
-    private function mergeResults(array $a, array $b): array
-    {
-        foreach (['created_dirs', 'copied_files', 'skipped_files', 'overwritten_files'] as $key) {
-            $a[$key] = ($a[$key] ?? 0) + ($b[$key] ?? 0);
-        }
-
-        return $a;
     }
 }
