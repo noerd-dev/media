@@ -13,7 +13,7 @@ return new class extends Migration
             DB::table('tenant_apps')->insert([
                 'title' => 'Media',
                 'name' => 'MEDIA',
-                'icon' => 'icons.media',
+                'icon' => 'media::icons.app',
                 'route' => 'media.dashboard',
                 'is_active' => 1,
                 'created_at' => now(),
