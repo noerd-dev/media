@@ -4,17 +4,24 @@ namespace Noerd\Media\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use Noerd\Noerd\Traits\RequiresNoerdInstallation;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 class NoerdMediaInstallCommand extends Command
 {
+    use RequiresNoerdInstallation;
     protected $signature = 'noerd:install-media {--force : Overwrite existing files without asking}';
 
     protected $description = 'Install noerd media content to the local content directory';
 
     public function handle()
     {
+        // Ensure noerd:install has been run first
+        if (! $this->ensureNoerdInstalled()) {
+            return 1;
+        }
+
         $this->info('Installing noerd media content...');
 
         $sourceDir = base_path('vendor/noerd/media/content');
@@ -40,8 +47,8 @@ class NoerdMediaInstallCommand extends Command
             $results = $this->copyDirectoryContents($sourceDir, $targetDir);
 
             // Ensure lists are copied explicitly to content/lists
-            $listsSource = $sourceDir.DIRECTORY_SEPARATOR.'lists';
-            $listsTarget = $targetDir.DIRECTORY_SEPARATOR.'lists';
+            $listsSource = $sourceDir . DIRECTORY_SEPARATOR . 'lists';
+            $listsTarget = $targetDir . DIRECTORY_SEPARATOR . 'lists';
             if (is_dir($listsSource)) {
                 $listResults = $this->copyDirectoryContents($listsSource, $listsTarget);
                 $results = $this->mergeResults($results, $listResults);
@@ -53,7 +60,7 @@ class NoerdMediaInstallCommand extends Command
 
             return 0;
         } catch (Exception $e) {
-            $this->error('Error installing noerd media content: '.$e->getMessage());
+            $this->error('Error installing noerd media content: ' . $e->getMessage());
 
             return 1;
         }
@@ -76,7 +83,7 @@ class NoerdMediaInstallCommand extends Command
         foreach ($iterator as $item) {
             $sourcePath = $item->getPathname();
             $relativePath = mb_substr($sourcePath, mb_strlen($sourceDir) + 1);
-            $targetPath = $targetDir.DIRECTORY_SEPARATOR.$relativePath;
+            $targetPath = $targetDir . DIRECTORY_SEPARATOR . $relativePath;
 
             if ($item->isDir()) {
                 if (! is_dir($targetPath)) {
