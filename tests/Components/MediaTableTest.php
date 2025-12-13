@@ -11,7 +11,7 @@ uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function (): void {
     Storage::fake('media');
-    $this->user = User::factory()->create();
+    $this->user = User::factory()->withExampleTenant()->withSelectedApp('media')->create();
     $this->actingAs($this->user);
 });
 
