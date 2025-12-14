@@ -1,6 +1,8 @@
-- title: Media
-  name: media
-  route: "media"
+- title: Pdm
+  name: pdm
+  hidden: true
+  route: "pdm"
   block_menus: [
-    { title: 'Media', route: 'media.dashboard', heroicon: 'photo' },
+   # { title: media_nav_images, route: 'media.images', heroicon: 'photo' },
+   # { title: media_nav_files, route: 'media.files', heroicon: 'document-plus' },
   ]

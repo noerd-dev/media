@@ -41,7 +41,10 @@
     "Type to search or press Enter to add": "Tippen zum Suchen oder Enter zum Hinzufügen",
     "Existing tags": "Vorhandene Tags",
     "Tags": "Tags",
-    "Really delete?": "Wirklich löschen?"
+    "Really delete?": "Wirklich löschen?",
+
+    "media_nav_images": "Bilder",
+    "media_nav_files": "Dateien"
 }
 
 
