@@ -47,12 +47,7 @@ class NoerdMediaInstallCommand extends Command
 
     protected function getSourceDir(): string
     {
-        return base_path('vendor/noerd/media/content');
-    }
-
-    protected function getNavigationSourceFolder(): string
-    {
-        return 'media';
+        return base_path('app-modules/media/app-contents/media');
     }
 
     protected function getSnippetTitle(): string

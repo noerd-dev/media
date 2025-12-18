@@ -1,4 +1,0 @@
-- title: Media
-  navigations: [
-    { title: 'Media', route: media.dashboard, heroicon: 'photo' },
-  ]
