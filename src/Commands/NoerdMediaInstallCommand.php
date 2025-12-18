@@ -47,7 +47,7 @@ class NoerdMediaInstallCommand extends Command
 
     protected function getSourceDir(): string
     {
-        return base_path('app-modules/media/app-contents/media');
+        return dirname(__DIR__, 2) . '/app-contents/media';
     }
 
     protected function getSnippetTitle(): string
