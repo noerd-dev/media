@@ -47,7 +47,7 @@ it('can add, attach and detach tags for selected media', function (): void {
         'type' => 'image',
         'name' => 'bar.jpg',
         'extension' => 'jpg',
-        'path' => $this->user->selected_tenant_id.'/bar.jpg',
+        'path' => $this->user->selected_tenant_id . '/bar.jpg',
         'disk' => 'media',
         'size' => 99,
     ]);
@@ -82,21 +82,21 @@ it('filters media by multiple tags (AND)', function (): void {
     // Media 1: A only
     $m1 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m1.jpg', 'disk' => 'media', 'size' => 1,
+        'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m1.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m1->tags()->sync([$tagA->id]);
 
     // Media 2: B only
     $m2 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m2.jpg', 'disk' => 'media', 'size' => 1,
+        'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m2.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m2->tags()->sync([$tagB->id]);
 
     // Media 3: A and B
     $m3 = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id.'/m3.jpg', 'disk' => 'media', 'size' => 1,
+        'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m3.jpg', 'disk' => 'media', 'size' => 1,
     ]);
     $m3->tags()->sync([$tagA->id, $tagB->id]);
 
@@ -112,7 +112,7 @@ it('filters media by multiple tags (AND)', function (): void {
 });
 
 it('deletes media and removes file from disk', function (): void {
-    $path = $this->user->selected_tenant_id.'/todelete.jpg';
+    $path = $this->user->selected_tenant_id . '/todelete.jpg';
     Storage::disk('media')->put($path, 'x');
 
     $media = Media::create([

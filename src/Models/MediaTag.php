@@ -19,4 +19,3 @@ class MediaTag extends Model
         return $this->belongsToMany(Media::class, 'media_tag_media');
     }
 }
-

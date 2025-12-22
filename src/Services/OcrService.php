@@ -25,10 +25,10 @@ class OcrService
 
             putenv('MAGICK_THREAD_LIMIT=1'); // optional safety
             putenv('MAGICK_TEMPORARY_PATH=/tmp'); // optional if you're on a container
-            putenv('PATH='.getenv('PATH').':/usr/bin'); // make sure gs is found
+            putenv('PATH=' . getenv('PATH') . ':/usr/bin'); // make sure gs is found
 
             // Convert PDF to images using Imagick
-            $imagick = new Imagick;
+            $imagick = new Imagick();
             $imagick->setResolution(300, 300); // High resolution for better OCR
             $imagick->readImage($path);
             $imagick->setImageFormat('png');
@@ -40,7 +40,7 @@ class OcrService
                 // dump("Processing page " . ($i + 1) . " of {$totalPages}...");
 
                 $imagick->setIteratorIndex($i);
-                $imagePath = $tempDir."/page_{$i}.png";
+                $imagePath = $tempDir . "/page_{$i}.png";
                 $imagick->writeImage($imagePath);
 
                 // Run OCR on the image using LaraOCR
@@ -54,8 +54,8 @@ class OcrService
 
                 $debugInfo[] = $pageInfo;
 
-                $allText .= '=== PAGE '.($i + 1)." ===\n";
-                $allText .= $pageText."\n\n";
+                $allText .= '=== PAGE ' . ($i + 1) . " ===\n";
+                $allText .= $pageText . "\n\n";
 
                 // Clean up the temporary image
                 unlink($imagePath);
@@ -67,8 +67,8 @@ class OcrService
             // dump("OCR processing completed successfully!");
         } catch (Exception $e) {
             $debugInfo['error'] = $e->getMessage();
-            $allText .= 'OCR Error: '.$e->getMessage()."\n";
-            dump('OCR Error: '.$e->getMessage());
+            $allText .= 'OCR Error: ' . $e->getMessage() . "\n";
+            dump('OCR Error: ' . $e->getMessage());
         }
 
         return [

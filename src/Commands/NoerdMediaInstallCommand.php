@@ -22,6 +22,41 @@ class NoerdMediaInstallCommand extends Command
         return $this->runModuleInstallation();
     }
 
+    protected function getModuleName(): string
+    {
+        return 'Media';
+    }
+
+    protected function getModuleKey(): string
+    {
+        return 'media';
+    }
+
+    protected function getDefaultAppTitle(): string
+    {
+        return 'Media';
+    }
+
+    protected function getAppIcon(): string
+    {
+        return 'media::icons.app';
+    }
+
+    protected function getAppRoute(): string
+    {
+        return 'media.dashboard';
+    }
+
+    protected function getSourceDir(): string
+    {
+        return dirname(__DIR__, 2) . '/app-contents/media';
+    }
+
+    protected function getSnippetTitle(): string
+    {
+        return 'Media';
+    }
+
     /**
      * Update filesystems.php configuration to add media disk
      */
@@ -67,40 +102,5 @@ class NoerdMediaInstallCommand extends Command
         } else {
             $this->warn('Could not automatically add media disk configuration. Please add it manually.');
         }
-    }
-
-    protected function getModuleName(): string
-    {
-        return 'Media';
-    }
-
-    protected function getModuleKey(): string
-    {
-        return 'media';
-    }
-
-    protected function getDefaultAppTitle(): string
-    {
-        return 'Media';
-    }
-
-    protected function getAppIcon(): string
-    {
-        return 'media::icons.app';
-    }
-
-    protected function getAppRoute(): string
-    {
-        return 'media.dashboard';
-    }
-
-    protected function getSourceDir(): string
-    {
-        return dirname(__DIR__, 2) . '/app-contents/media';
-    }
-
-    protected function getSnippetTitle(): string
-    {
-        return 'Media';
     }
 }

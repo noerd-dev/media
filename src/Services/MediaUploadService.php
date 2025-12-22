@@ -17,8 +17,8 @@ class MediaUploadService
      */
     public function storeFromArray(array $file): Media
     {
-        $randomName = Str::random().'_'.$file['name'];
-        $destinationPath = Auth::user()->selected_tenant_id.'/'.$randomName;
+        $randomName = Str::random() . '_' . $file['name'];
+        $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
         $disk = config('media.disk');
         Storage::disk($disk)->put($destinationPath, file_get_contents($file['path']));
@@ -43,8 +43,8 @@ class MediaUploadService
         $extension = $uploadedFile->getClientOriginalExtension();
         $size = $uploadedFile->getSize();
 
-        $randomName = Str::random().'_'.$originalName;
-        $destinationPath = Auth::user()->selected_tenant_id.'/'.$randomName;
+        $randomName = Str::random() . '_' . $originalName;
+        $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
         $disk = config('media.disk');
         $stream = fopen($uploadedFile->getRealPath(), 'r');
