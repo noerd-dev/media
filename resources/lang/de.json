@@ -44,7 +44,10 @@
     "Really delete?": "Wirklich löschen?",
 
     "media_nav_images": "Bilder",
-    "media_nav_files": "Dateien"
+    "media_nav_files": "Dateien",
+
+    "media_title": "Medien",
+    "media_new_file": "Neue Mediendatei"
 }
 
 

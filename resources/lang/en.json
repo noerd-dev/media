@@ -44,5 +44,8 @@
     "Really delete?": "Really delete?",
 
     "media_nav_images": "Images",
-    "media_nav_files": "Files"
+    "media_nav_files": "Files",
+
+    "media_title": "Media",
+    "media_new_file": "New Media File"
 }
