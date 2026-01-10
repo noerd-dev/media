@@ -59,7 +59,7 @@ new class extends Component {
 
         return [
             'rows' => (clone $baseQuery)->limit($this->perPage)->get(),
-            'tableConfig' => StaticConfigHelper::getTableConfig('media-list'),
+            'tableConfig' => $this->getTableConfig(),
             'tags' => $allTags,
             'availableTags' => $availableTags,
             'totalCount' => (clone $baseQuery)->count(),
