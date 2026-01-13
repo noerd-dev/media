@@ -28,6 +28,11 @@ new class extends Component {
         $this->sortField = 'id';
         $this->sortAsc = false;
         $this->perPage = self::PAGINATION;
+
+        // Support selectAction from input-relation component
+        if ($this->tableActionMethod === 'selectAction') {
+            $this->selectMode = true;
+        }
     }
 
     public function with(): array
@@ -124,7 +129,7 @@ new class extends Component {
             return;
         }
         $this->dispatch('mediaSelected', $id, $this->selectContext, $this->selectToken);
-        $this->dispatch('close-modal-media-select-modal');
+        $this->dispatch('close-modal-media-list');
     }
 
     public function addOrAttachTag(string $tagName): void
