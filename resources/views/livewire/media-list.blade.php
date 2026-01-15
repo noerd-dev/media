@@ -77,7 +77,7 @@ new class extends Component {
             event: 'noerdModal',
             component: 'media-detail',
             source: self::COMPONENT,
-            arguments: ['modelId' => $modelId, 'relationId' => $relationId],
+            arguments: ['mediaId' => $modelId, 'relationId' => $relationId],
         );
     }
 
