@@ -5,16 +5,24 @@ namespace Noerd\Media\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Noerd\Noerd\Traits\BelongsToTenant;
+use Noerd\Noerd\Traits\HasListScopes;
 use Nywerk\Uki\Database\Factories\MediaFactory;
 use Nywerk\Uki\Models\TextDocument;
 
 class Media extends Model
 {
+    use BelongsToTenant;
     use HasFactory;
+    use HasListScopes;
 
     protected $guarded = [];
 
     protected $table = 'medias';
+
+    protected array $searchable = [
+        'name',
+    ];
 
     public function aiDocument()
     {
