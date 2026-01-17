@@ -75,7 +75,7 @@ new class extends Component {
     {
         $this->dispatch(
             event: 'noerdModal',
-            component: 'media-detail',
+            modalComponent: 'media-detail',
             source: self::COMPONENT,
             arguments: ['mediaId' => $modelId, 'relationId' => $relationId],
         );
