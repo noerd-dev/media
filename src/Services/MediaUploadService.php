@@ -17,7 +17,8 @@ class MediaUploadService
      */
     public function storeFromArray(array $file): Media
     {
-        $randomName = Str::random() . '_' . $file['name'];
+        $sanitizedName = $this->sanitizeFilename($file['name']);
+        $randomName = Str::random() . '_' . $sanitizedName;
         $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
         $disk = config('media.disk');
@@ -29,7 +30,7 @@ class MediaUploadService
             'tenant_id' => Auth::user()->selected_tenant_id,
             'path' => $destinationPath,
             'type' => 'image',
-            'name' => $file['name'],
+            'name' => $sanitizedName,
             'extension' => $file['extension'],
             'size' => $file['size'],
             'disk' => $disk,
@@ -40,10 +41,11 @@ class MediaUploadService
     public function storeFromUploadedFile($uploadedFile): Media
     {
         $originalName = $uploadedFile->getClientOriginalName();
+        $sanitizedName = $this->sanitizeFilename($originalName);
         $extension = $uploadedFile->getClientOriginalExtension();
         $size = $uploadedFile->getSize();
 
-        $randomName = Str::random() . '_' . $originalName;
+        $randomName = Str::random() . '_' . $sanitizedName;
         $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
 
         $disk = config('media.disk');
@@ -54,7 +56,7 @@ class MediaUploadService
         }
 
         $fileMeta = [
-            'name' => $originalName,
+            'name' => $sanitizedName,
             'extension' => $extension,
             'size' => $size,
         ];
@@ -64,7 +66,7 @@ class MediaUploadService
             'tenant_id' => Auth::user()->selected_tenant_id,
             'path' => $destinationPath,
             'type' => 'image',
-            'name' => $originalName,
+            'name' => $sanitizedName,
             'extension' => $extension,
             'size' => $size,
             'disk' => $disk,
@@ -81,5 +83,10 @@ class MediaUploadService
         $disk = Storage::disk(config('media.disk'));
 
         return $disk->url($media->path);
+    }
+
+    private function sanitizeFilename(string $filename): string
+    {
+        return Str::ascii($filename, 'de');
     }
 }

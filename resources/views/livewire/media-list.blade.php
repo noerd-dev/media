@@ -6,7 +6,6 @@ use Livewire\Volt\Component;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
-use Noerd\Noerd\Helpers\StaticConfigHelper;
 use Noerd\Noerd\Traits\Noerd;
 
 new class extends Component {
@@ -25,12 +24,10 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->sortField = 'id';
-        $this->sortAsc = false;
         $this->perPage = self::PAGINATION;
 
         // Support selectAction from input-relation component
-        if ($this->tableActionMethod === 'selectAction') {
+        if ($this->listActionMethod === 'selectAction') {
             $this->selectMode = true;
         }
     }
@@ -38,13 +35,14 @@ new class extends Component {
     public function with(): array
     {
         $baseQuery = Media::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->when($this->search, fn($query) => $query->where('name', 'like', '%'.$this->search.'%'))
+            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
             ->when(count($this->filterTagIds) > 0, function ($query): void {
                 foreach ($this->filterTagIds as $tagId) {
                     $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));
                 }
             });
+
+        $rows = (clone $baseQuery)->limit($this->perPage)->get();
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
             ->orderBy('name')
@@ -63,15 +61,14 @@ new class extends Component {
             ->toArray();
 
         return [
-            'rows' => (clone $baseQuery)->limit($this->perPage)->get(),
-            'tableConfig' => $this->getTableConfig(),
+            'listConfig' => $this->buildList($rows),
             'tags' => $allTags,
             'availableTags' => $availableTags,
             'totalCount' => (clone $baseQuery)->count(),
         ];
     }
 
-    public function tableAction(mixed $modelId = null, mixed $relationId = null): void
+    public function listAction(mixed $modelId = null, mixed $relationId = null): void
     {
         $this->dispatch(
             event: 'noerdModal',
@@ -89,11 +86,11 @@ new class extends Component {
     public function rendering(): void
     {
         if ((int) request()->orderConfrimationId) {
-            $this->tableAction(request()->orderConfrimationId);
+            $this->listAction(request()->orderConfrimationId);
         }
 
         if (request()->create) {
-            $this->tableAction();
+            $this->listAction();
         }
     }
 
@@ -231,7 +228,7 @@ new class extends Component {
 
             {{-- Media Items --}}
             <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
-                @foreach($rows as $row)
+                @foreach($listConfig['rows'] as $row)
                     <a wire:click="{{ $selectMode ? 'chooseMedia' : 'selectMedia' }}({{ $row->id }})"
                        @class([
                            'relative cursor-pointer w-full aspect-square p-4',
