@@ -103,7 +103,7 @@ it('filters media by multiple tags (AND)', function (): void {
     $component = Volt::test('media-list')
         ->set('filterTagIds', [$tagA->id, $tagB->id]);
 
-    $rows = $component->viewData('rows');
+    $rows = $component->viewData('listConfig')['rows'];
     $ids = collect($rows)->pluck('id');
 
     expect($ids)->toContain($m3->id);
