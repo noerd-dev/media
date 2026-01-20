@@ -7,9 +7,87 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
+use Noerd\Media\Models\Media;
 
 class ImagePreviewService
 {
+    /**
+     * Supported extensions for thumbnail generation.
+     */
+    public const SUPPORTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'pdf'];
+
+    /**
+     * Regenerate thumbnail for an existing media record.
+     * This method works in console context by using the media's tenant_id.
+     */
+    public function regenerateThumbnail(Media $media): ?string
+    {
+        $disk = config('media.disk');
+        $extension = mb_strtolower(pathinfo($media->path, PATHINFO_EXTENSION));
+
+        if (! in_array($extension, self::SUPPORTED_EXTENSIONS)) {
+            return null;
+        }
+
+        $sourcePath = Storage::disk($disk)->path($media->path);
+
+        if (! file_exists($sourcePath)) {
+            return null;
+        }
+
+        // Delete existing thumbnail if present
+        if ($media->thumbnail && Storage::disk($disk)->exists($media->thumbnail)) {
+            Storage::disk($disk)->delete($media->thumbnail);
+        }
+
+        $manager = new ImageManager(new Driver());
+        $thumbPath = null;
+
+        if (in_array($extension, ['png', 'jpg', 'jpeg', 'webp'])) {
+            $image = $manager->read($sourcePath);
+
+            $originalWidth = $image->width();
+            $originalHeight = $image->height();
+
+            $newWidth = 500;
+            $newHeight = (int) (($originalHeight / $originalWidth) * $newWidth);
+
+            $thumbnail = $image->resize($newWidth, $newHeight);
+
+            $randomName = Str::random();
+            $thumbPath = $media->tenant_id . '/thumbnails/thumb_' . $randomName . '.jpg';
+            Storage::disk($disk)->put($thumbPath, (string) $thumbnail->toJpeg());
+        }
+
+        if ($extension === 'pdf') {
+            $randomName = Str::random();
+            $thumbPath = $media->tenant_id . '/thumbnails/pdf_' . $randomName . '.jpg';
+            $fullPreviewPath = Storage::disk($disk)->path($thumbPath);
+
+            if (env('APP_ENV') === 'local') {
+                putenv('PATH=/opt/homebrew/bin:' . getenv('PATH'));
+            }
+
+            Storage::disk($disk)->makeDirectory($media->tenant_id . '/thumbnails');
+
+            $imagickClass = 'Imagick';
+            if (class_exists($imagickClass)) {
+                $imagick = new $imagickClass();
+                $imagick->setOption('gs:MaxBitmap', '1000000000');
+                $imagick->setResolution(150, 150);
+                $imagick->readImage($sourcePath . '[0]');
+                $imagick->setImageFormat('jpg');
+                $imagick->writeImage($fullPreviewPath);
+                $imagick->clear();
+                $imagick->destroy();
+            } else {
+                $thumbPath = null;
+            }
+        }
+
+        return $thumbPath;
+    }
+
     public function createPreviewForFile(array $file, string $destinationPath): ?string
     {
         $manager = new ImageManager(new Driver());

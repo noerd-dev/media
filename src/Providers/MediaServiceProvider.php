@@ -5,6 +5,7 @@ namespace Noerd\Media\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
+use Noerd\Media\Commands\RegenerateThumbnailsCommand;
 
 class MediaServiceProvider extends ServiceProvider
 {
@@ -26,6 +27,7 @@ class MediaServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 NoerdMediaInstallCommand::class,
+                RegenerateThumbnailsCommand::class,
             ]);
         }
     }
