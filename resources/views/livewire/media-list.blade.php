@@ -6,7 +6,7 @@ use Livewire\Volt\Component;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
-use Noerd\Noerd\Traits\Noerd;
+use Noerd\Traits\Noerd;
 
 new class extends Component {
     use Noerd;

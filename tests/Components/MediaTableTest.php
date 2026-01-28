@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
-use Noerd\Noerd\Models\User;
+use Noerd\Models\User;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 

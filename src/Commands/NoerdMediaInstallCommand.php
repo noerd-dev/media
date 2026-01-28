@@ -3,8 +3,8 @@
 namespace Noerd\Media\Commands;
 
 use Illuminate\Console\Command;
-use Noerd\Noerd\Traits\HasModuleInstallation;
-use Noerd\Noerd\Traits\RequiresNoerdInstallation;
+use Noerd\Traits\HasModuleInstallation;
+use Noerd\Traits\RequiresNoerdInstallation;
 
 class NoerdMediaInstallCommand extends Command
 {

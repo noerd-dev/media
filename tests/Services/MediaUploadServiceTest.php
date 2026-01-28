@@ -5,7 +5,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media as MediaModel;
 use Noerd\Media\Services\MediaUploadService;
-use Noerd\Noerd\Models\User;
+use Noerd\Models\User;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 

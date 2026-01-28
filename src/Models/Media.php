@@ -5,8 +5,8 @@ namespace Noerd\Media\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Noerd\Noerd\Traits\BelongsToTenant;
-use Noerd\Noerd\Traits\HasListScopes;
+use Noerd\Traits\BelongsToTenant;
+use Noerd\Traits\HasListScopes;
 use Nywerk\Uki\Database\Factories\MediaFactory;
 use Nywerk\Uki\Models\TextDocument;
 
