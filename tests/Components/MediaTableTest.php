@@ -2,7 +2,7 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Volt\Volt;
+
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Models\User;
@@ -30,7 +30,7 @@ it('stores uploaded files via service when calling store()', function (): void {
 
     $before = Media::count();
 
-    Volt::test('media-list')
+    Livewire::test('media-list')
         ->set('files', [$filePayload])
         ->call('store');
 
@@ -52,7 +52,7 @@ it('can add, attach and detach tags for selected media', function (): void {
         'size' => 99,
     ]);
 
-    $component = Volt::test('media-list')
+    $component = Livewire::test('media-list')
         ->call('selectMedia', $media->id)
         ->call('addOrAttachTag', 'TestTag');
 
@@ -100,7 +100,7 @@ it('filters media by multiple tags (AND)', function (): void {
     ]);
     $m3->tags()->sync([$tagA->id, $tagB->id]);
 
-    $component = Volt::test('media-list')
+    $component = Livewire::test('media-list')
         ->set('filterTagIds', [$tagA->id, $tagB->id]);
 
     $rows = $component->viewData('listConfig')['rows'];
@@ -120,7 +120,7 @@ it('deletes media and removes file from disk', function (): void {
         'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1,
     ]);
 
-    Volt::test('media-list')->call('deleteMedia', $media->id);
+    Livewire::test('media-list')->call('deleteMedia', $media->id);
 
     expect(Media::find($media->id))->toBeNull();
     expect(Storage::disk('media')->exists($path))->toBeFalse();

@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Volt\Component;
+use Livewire\Component;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
