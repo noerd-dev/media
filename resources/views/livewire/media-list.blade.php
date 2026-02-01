@@ -11,7 +11,7 @@ use Noerd\Traits\Noerd;
 new class extends Component {
     use Noerd;
 
-    public const COMPONENT = 'media-list';
+    public const DETAIL_COMPONENT = 'media-list';
 
     public array $files = [];
     public ?Media $selected = null;
@@ -73,7 +73,7 @@ new class extends Component {
         $this->dispatch(
             event: 'noerdModal',
             modalComponent: 'media-detail',
-            source: self::COMPONENT,
+            source: self::DETAIL_COMPONENT,
             arguments: ['mediaId' => $modelId, 'relationId' => $relationId],
         );
     }
