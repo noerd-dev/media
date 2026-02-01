@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-
 Route::prefix('media')
     ->as('media.')
     ->middleware(['auth', 'verified', 'web', 'app-access:media'])

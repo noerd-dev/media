@@ -4,10 +4,11 @@ namespace Noerd\Media\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Noerd\Media\Models\Media;
-use Noerd\Media\Services\ImagePreviewService;
 
 use function Laravel\Prompts\progress;
+
+use Noerd\Media\Models\Media;
+use Noerd\Media\Services\ImagePreviewService;
 
 class RegenerateThumbnailsCommand extends Command
 {
@@ -19,7 +20,7 @@ class RegenerateThumbnailsCommand extends Command
     protected $description = 'Regenerate thumbnails for media files';
 
     public function __construct(
-        protected ImagePreviewService $imagePreviewService
+        protected ImagePreviewService $imagePreviewService,
     ) {
         parent::__construct();
     }
@@ -37,7 +38,7 @@ class RegenerateThumbnailsCommand extends Command
 
         $query = Media::query()
             ->whereNotNull('path')
-            ->where(function ($q) {
+            ->where(function ($q): void {
                 foreach (ImagePreviewService::SUPPORTED_EXTENSIONS as $ext) {
                     $q->orWhere('path', 'like', '%.' . $ext);
                 }
@@ -58,7 +59,7 @@ class RegenerateThumbnailsCommand extends Command
         progress(
             label: 'Regenerating thumbnails',
             steps: $mediaItems,
-            callback: function (Media $media) use ($disk, $regenerateAll, &$regenerated, &$skipped, &$failed) {
+            callback: function (Media $media) use ($disk, $regenerateAll, &$regenerated, &$skipped, &$failed): void {
                 $thumbnailExists = $media->thumbnail && Storage::disk($disk)->exists($media->thumbnail);
 
                 if (! $regenerateAll && $thumbnailExists) {
@@ -75,7 +76,7 @@ class RegenerateThumbnailsCommand extends Command
                 } else {
                     $failed++;
                 }
-            }
+            },
         );
 
         $this->newLine();
