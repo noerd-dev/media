@@ -126,7 +126,7 @@ new class extends Component {
             return;
         }
         $this->dispatch('mediaSelected', $id, $this->selectContext, $this->selectToken);
-        $this->dispatch('close-modal-media-list');
+        $this->dispatch('closeTopModal');
     }
 
     public function addOrAttachTag(string $tagName): void
