@@ -15,7 +15,7 @@ class MediaServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'media');
-        Livewire::addLocation(viewPath: __DIR__ . '/../../resources/views/livewire');
+        Livewire::addLocation(viewPath: __DIR__ . '/../../resources/views/components');
         $this->loadTranslationsFrom(__DIR__ . '/../../resources/lang', 'media');
         $this->loadJsonTranslationsFrom(__DIR__ . '/../../resources/lang');
         $this->loadRoutesFrom(__DIR__ . '/../../routes/media-routes.php');
