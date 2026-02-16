@@ -9,9 +9,7 @@ use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
 
 new class extends Component {
-    use NoerdList {
-        mount as noerdListMount;
-    }
+    use NoerdList;
 
     public array $files = [];
     public ?Media $selected = null;
@@ -24,7 +22,7 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->noerdListMount();
+        $this->mountList();
         $this->perPage = self::PAGINATION;
 
         // Support selectAction from input-relation component
