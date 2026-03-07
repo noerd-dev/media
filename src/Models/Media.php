@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Noerd\Traits\BelongsToTenant;
 use Noerd\Traits\HasListScopes;
-use Nywerk\Uki\Database\Factories\MediaFactory;
+use Noerd\Media\Database\Factories\MediaFactory;
 use Nywerk\Uki\Models\TextDocument;
 
 class Media extends Model
