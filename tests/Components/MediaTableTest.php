@@ -4,13 +4,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
-use Noerd\Models\User;
+use Noerd\Models\NoerdUser;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function (): void {
     Storage::fake('media');
-    $this->user = User::factory()->withExampleTenant()->withSelectedApp('media')->create();
+    $this->user = NoerdUser::factory()->withExampleTenant()->withSelectedApp('media')->create();
     $this->actingAs($this->user);
 });
 

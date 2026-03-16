@@ -7,22 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Noerd\Media\Database\Factories\MediaFactory;
 use Noerd\Traits\BelongsToTenant;
-use Noerd\Traits\HasListScopes;
 use Nywerk\Uki\Models\TextDocument;
 
 class Media extends Model
 {
     use BelongsToTenant;
     use HasFactory;
-    use HasListScopes;
 
     protected $guarded = [];
 
     protected $table = 'medias';
-
-    protected array $searchable = [
-        'name',
-    ];
 
     public function aiDocument()
     {

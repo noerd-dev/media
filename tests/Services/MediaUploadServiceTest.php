@@ -5,7 +5,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media as MediaModel;
 use Noerd\Media\Services\MediaUploadService;
-use Noerd\Models\User;
+use Noerd\Models\NoerdUser;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -14,7 +14,7 @@ beforeEach(function (): void {
 });
 
 it('stores media from uploaded file and creates thumbnail', function (): void {
-    $user = User::factory()->withExampleTenant()->create();
+    $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
@@ -34,7 +34,7 @@ it('stores media from uploaded file and creates thumbnail', function (): void {
 });
 
 it('stores media from array payload (dropzone style)', function (): void {
-    $user = User::factory()->withExampleTenant()->create();
+    $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
@@ -63,7 +63,7 @@ it('stores media from array payload (dropzone style)', function (): void {
 });
 
 it('replaces umlauts in filenames during upload', function (): void {
-    $user = User::factory()->withExampleTenant()->create();
+    $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
@@ -76,7 +76,7 @@ it('replaces umlauts in filenames during upload', function (): void {
 });
 
 it('replaces umlauts in filenames from array payload', function (): void {
-    $user = User::factory()->withExampleTenant()->create();
+    $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
@@ -96,7 +96,7 @@ it('replaces umlauts in filenames from array payload', function (): void {
 });
 
 it('replaces special characters in filenames during upload', function (): void {
-    $user = User::factory()->withExampleTenant()->create();
+    $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
