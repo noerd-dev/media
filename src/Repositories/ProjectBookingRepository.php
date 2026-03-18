@@ -3,7 +3,7 @@
 namespace Noerd\Media\Repositories;
 
 use Illuminate\Support\Facades\Auth;
-use Nywerk\HarvesterProject\Models\ProjectBooking;
+use Noerd\HarvesterProject\Models\ProjectBooking;
 
 class ProjectBookingRepository
 {
