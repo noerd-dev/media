@@ -14,7 +14,6 @@ new class extends Component {
     public array $files = [];
     public ?Media $selected = null;
     public array $filterTagIds = [];
-    public int $perPage = 0;
     public bool $hideDetail = false;
     public bool $selectMode = false;
     public ?string $selectContext = null;
@@ -23,7 +22,6 @@ new class extends Component {
     public function mount(): void
     {
         $this->mountList();
-        $this->perPage = self::PAGINATION;
 
         // Support selectAction from input-relation component
         if ($this->listActionMethod === 'selectAction') {
@@ -169,23 +167,21 @@ new class extends Component {
         } else {
             $this->filterTagIds[] = $tagId;
         }
-        $this->perPage = self::PAGINATION;
     }
 
     public function clearFilters(): void
     {
         $this->filterTagIds = [];
-        $this->perPage = self::PAGINATION;
     }
 
     public function loadMore(): void
     {
-        $this->perPage += self::PAGINATION;
+        $this->perPage += $this->perPage;
     }
 
     public function updatedSearch(): void
     {
-        $this->perPage = self::PAGINATION;
+        $this->resetPage();
     }
 } ?>
 
