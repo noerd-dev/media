@@ -7,10 +7,17 @@ use Livewire\Livewire;
 use Noerd\Media\Commands\MediaUpdateCommand;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
+use Noerd\Media\Services\MediaResolver;
 
 class MediaServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->singleton(
+            \Noerd\Contracts\MediaResolverContract::class,
+            MediaResolver::class,
+        );
+    }
 
     public function boot(): void
     {
