@@ -47,4 +47,9 @@ class MediaResolver implements MediaResolverContract
 
         return mb_strstr($url, '/storage');
     }
+
+    public function isAvailable(): bool
+    {
+        return true;
+    }
 }
