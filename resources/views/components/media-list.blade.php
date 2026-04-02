@@ -39,7 +39,7 @@ new class extends Component {
                 }
             });
 
-        $rows = (clone $baseQuery)->limit($this->perPage)->get();
+        $rows = (clone $baseQuery)->latest()->limit($this->perPage)->get();
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
             ->orderBy('name')
