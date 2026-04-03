@@ -18,6 +18,13 @@ class Media extends Model
 
     protected $table = 'medias';
 
+    protected function casts(): array
+    {
+        return [
+            'custom_attributes' => 'array',
+        ];
+    }
+
     public function aiDocument()
     {
         return $this->hasOne(TextDocument::class);
