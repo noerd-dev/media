@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
@@ -22,6 +24,8 @@ new class extends Component {
     public ?string $selectToken = null;
     public bool $bulkSelectMode = false;
     public array $selectedMediaIds = [];
+    public ?int $currentFolderId = null;
+    public string $newFolderName = '';
 
     public function mount(): void
     {
@@ -83,6 +87,10 @@ new class extends Component {
 
     public function with(): array
     {
+        $hasActiveFilters = $this->search !== ''
+            || count($this->filterTagIds) > 0
+            || collect($this->listFilters)->filter()->isNotEmpty();
+
         $baseQuery = Media::where('tenant_id', Auth::user()->selected_tenant_id)
             ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
             ->when(count($this->filterTagIds) > 0, function ($query): void {
@@ -90,9 +98,22 @@ new class extends Component {
                     $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));
                 }
             })
-            ->tap(fn($query) => $this->applyListFilters($query));
+            ->tap(fn($query) => $this->applyListFilters($query))
+            // Folder context only applies when no search/filter is active (global search per UX choice)
+            ->when(! $hasActiveFilters, fn($query) => $query->where('folder_id', $this->currentFolderId));
 
         $rows = (clone $baseQuery)->latest()->limit($this->perPage)->get();
+
+        $currentFolder = $this->currentFolderId
+            ? MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($this->currentFolderId)
+            : null;
+
+        $folders = $hasActiveFilters
+            ? collect()
+            : MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+                ->where('parent_id', $this->currentFolderId)
+                ->orderBy('name')
+                ->get();
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
             ->orderBy('name')
@@ -115,6 +136,9 @@ new class extends Component {
             'tags' => $allTags,
             'availableTags' => $availableTags,
             'totalCount' => (clone $baseQuery)->count(),
+            'folders' => $folders,
+            'breadcrumb' => $currentFolder?->breadcrumb() ?? [],
+            'hasActiveFilters' => $hasActiveFilters,
         ];
     }
 
@@ -289,6 +313,83 @@ new class extends Component {
     {
         $this->resetPage();
     }
+
+    public function openFolder(?int $folderId): void
+    {
+        $this->currentFolderId = $folderId;
+        $this->selected = null;
+        $this->resetPage();
+    }
+
+    public function createFolder(): void
+    {
+        $name = trim($this->newFolderName);
+        if ($name === '') {
+            return;
+        }
+
+        MediaFolder::create([
+            'tenant_id' => Auth::user()->selected_tenant_id,
+            'parent_id' => $this->currentFolderId,
+            'name' => $name,
+        ]);
+
+        $this->newFolderName = '';
+    }
+
+    public function deleteFolder(int $folderId): void
+    {
+        $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
+        if (! $folder) {
+            return;
+        }
+
+        // Cascade: move children folders + files up to the deleted folder's parent
+        MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+            ->where('parent_id', $folder->id)
+            ->update(['parent_id' => $folder->parent_id]);
+
+        Media::where('tenant_id', Auth::user()->selected_tenant_id)
+            ->where('folder_id', $folder->id)
+            ->update(['folder_id' => $folder->parent_id]);
+
+        $folder->delete();
+    }
+
+    public function openMoveModal(?int $mediaId = null): void
+    {
+        $ids = $mediaId !== null ? [$mediaId] : $this->selectedMediaIds;
+        if ($ids === []) {
+            return;
+        }
+
+        $this->dispatch(
+            event: 'noerdModal',
+            modalComponent: 'media-folder-picker',
+            source: $this->getComponentName(),
+            arguments: ['mediaIds' => $ids],
+        );
+    }
+
+    #[On('mediaFolderPicked')]
+    public function moveMediaToFolder(array $mediaIds, ?int $folderId): void
+    {
+        if ($mediaIds === []) {
+            return;
+        }
+
+        Media::whereIn('id', $mediaIds)
+            ->where('tenant_id', Auth::user()->selected_tenant_id)
+            ->update(['folder_id' => $folderId]);
+
+        if ($this->bulkSelectMode) {
+            $this->exitBulkSelectMode();
+        }
+
+        if ($this->selected && in_array($this->selected->id, $mediaIds, true)) {
+            $this->selected = null;
+        }
+    }
 } ?>
 
 <x-noerd::page :disableModal="$disableModal">
@@ -304,12 +405,44 @@ new class extends Component {
                 />
             </div>
 
+            {{-- Breadcrumb + Folder Creator (hidden when filters are active) --}}
+            @unless($hasActiveFilters)
+                <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
+                    <nav class="flex items-center gap-2 text-sm">
+                        <button type="button"
+                                wire:click="openFolder(null)"
+                                class="hover:underline {{ $currentFolderId === null ? 'font-semibold' : '' }}">
+                            {{ __('media_label_root') }}
+                        </button>
+                        @foreach($breadcrumb as $crumb)
+                            <span class="text-gray-400">/</span>
+                            <button type="button"
+                                    wire:click="openFolder({{ $crumb['id'] }})"
+                                    class="hover:underline {{ $loop->last ? 'font-semibold' : '' }}">
+                                {{ $crumb['name'] }}
+                            </button>
+                        @endforeach
+                    </nav>
+
+                    <div class="flex items-center gap-2 ml-auto">
+                        <x-noerd::text-input
+                            wire:model="newFolderName"
+                            wire:keydown.enter="createFolder"
+                            type="text"
+                            placeholder="{{ __('media_folder_name') }}"
+                            class="!mt-0 h-[30px] min-w-[160px]"/>
+                        <button type="button"
+                                wire:click="createFolder"
+                                class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                            {{ __('media_create_folder') }}
+                        </button>
+                    </div>
+                </div>
+            @endunless
+
             {{-- Search + Filters Row --}}
             @php
                 $tableFilters = $this->tableFilters();
-                $hasActiveFilters = $search !== ''
-                    || count($filterTagIds) > 0
-                    || collect($listFilters)->filter()->isNotEmpty();
             @endphp
             <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
                 <div class="relative">
@@ -355,6 +488,15 @@ new class extends Component {
                     <span class="text-sm text-gray-600">
                         {{ __('media_selected_count', ['count' => count($selectedMediaIds)]) }}
                     </span>
+                    <button type="button"
+                            wire:click="openMoveModal"
+                            @class([
+                                'text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50',
+                                'opacity-50 cursor-not-allowed' => count($selectedMediaIds) === 0,
+                            ])
+                            @disabled(count($selectedMediaIds) === 0)>
+                        {{ __('media_move_to_folder') }}
+                    </button>
                     <x-noerd::buttons.delete wire:confirm="{{ __('Really delete selected?') }}"
                                              wire:click="deleteSelectedMedia"
                                              :disabled="count($selectedMediaIds) === 0">
@@ -385,6 +527,24 @@ new class extends Component {
 
             {{-- Media Items --}}
             <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
+                @foreach($folders as $folder)
+                    <div wire:key="folder-tile-{{ $folder->id }}"
+                         class="relative w-full aspect-square p-4 border border-b-gray-400 hover:bg-gray-100">
+                        <button type="button"
+                                wire:click="openFolder({{ $folder->id }})"
+                                class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19.5 21a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3h-5.379a.75.75 0 0 1-.53-.22L11.47 3.66A2.25 2.25 0 0 0 9.879 3H4.5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15Z"/>
+                            </svg>
+                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ $folder->name }}</span>
+                        </button>
+                        <button type="button"
+                                wire:click="deleteFolder({{ $folder->id }})"
+                                wire:confirm="{{ __('media_delete_folder_confirm') }}"
+                                class="absolute top-2 right-2 z-10 text-red-600 hover:text-red-800 text-xl leading-none"
+                                title="{{ __('Delete') }}">×</button>
+                    </div>
+                @endforeach
                 @foreach($listConfig['rows'] as $row)
                     @php
                         $isMultiSelected = in_array($row->id, $selectedMediaIds, true);
@@ -511,8 +671,13 @@ new class extends Component {
                             </div>
                         </div>
 
-                        {{-- Delete Button --}}
-                        <div class="pt-4">
+                        {{-- Move + Delete Buttons --}}
+                        <div class="pt-4 flex flex-wrap items-center gap-2">
+                            <button type="button"
+                                    wire:click="openMoveModal({{ $selected->id }})"
+                                    class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                                {{ __('media_move_to_folder') }}
+                            </button>
                             <x-noerd::buttons.delete wire:confirm="{{ __('Really delete?') }}"
                                                      wire:click="deleteMedia({{ $selected->id }})">
                                 {{ __('Delete') }}

@@ -56,5 +56,13 @@
     "media_label_type": "Type",
     "media_all_types": "All types",
     "media_label_uploaded_from": "Uploaded from",
-    "media_label_uploaded_until": "Uploaded until"
+    "media_label_uploaded_until": "Uploaded until",
+    "media_label_root": "Root",
+    "media_label_folder": "Folder",
+    "media_new_folder": "New folder",
+    "media_create_folder": "Create folder",
+    "media_folder_name": "Folder name",
+    "media_move_to_folder": "Move to folder",
+    "media_select_target_folder": "Select target folder",
+    "media_delete_folder_confirm": "Delete folder? Contents will move to the parent folder."
 }

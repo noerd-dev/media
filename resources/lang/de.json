@@ -56,7 +56,15 @@
     "media_label_type": "Typ",
     "media_all_types": "Alle Typen",
     "media_label_uploaded_from": "Upload ab",
-    "media_label_uploaded_until": "Upload bis"
+    "media_label_uploaded_until": "Upload bis",
+    "media_label_root": "Stamm",
+    "media_label_folder": "Ordner",
+    "media_new_folder": "Neuer Ordner",
+    "media_create_folder": "Ordner erstellen",
+    "media_folder_name": "Ordnername",
+    "media_move_to_folder": "In Ordner verschieben",
+    "media_select_target_folder": "Zielordner auswählen",
+    "media_delete_folder_confirm": "Ordner löschen? Inhalte werden in den übergeordneten Ordner verschoben."
 }
 
 

@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Noerd\Media\Models\Media;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Process;
 
 class ImagePreviewService
 {
@@ -65,32 +67,9 @@ class ImagePreviewService
             $thumbPath = $media->tenant_id . '/thumbnails/pdf_' . $randomName . '.jpg';
             $fullPreviewPath = Storage::disk($disk)->path($thumbPath);
 
-            if (env('APP_ENV') === 'local') {
-                putenv('PATH=/opt/homebrew/bin:' . getenv('PATH'));
-            }
-
             Storage::disk($disk)->makeDirectory($media->tenant_id . '/thumbnails');
 
-            $imagickClass = 'Imagick';
-            if (class_exists($imagickClass)) {
-                try {
-                    $imagick = new $imagickClass();
-                    $imagick->setOption('gs:MaxBitmap', '1000000000');
-                    $imagick->setResolution(150, 150);
-                    $imagick->readImage($sourcePath . '[0]');
-                    $imagick->setImageFormat('jpg');
-                    $imagick->writeImage($fullPreviewPath);
-                    $imagick->clear();
-                    $imagick->destroy();
-                } catch (\Throwable $e) {
-                    Log::warning('PDF thumbnail regeneration failed, skipping preview.', [
-                        'media_id' => $media->id,
-                        'path' => $media->path,
-                        'error' => $e->getMessage(),
-                    ]);
-                    $thumbPath = null;
-                }
-            } else {
+            if (! $this->generatePdfThumbnail($sourcePath, $fullPreviewPath)) {
                 $thumbPath = null;
             }
         }
@@ -121,48 +100,63 @@ class ImagePreviewService
             Storage::disk($disk)->put($thumbPath, (string) $thumbnail->toJpeg());
         }
 
-        if (in_array($extension, ['pdf'])) {
-            $filename = pathinfo($file['name'], PATHINFO_FILENAME);
+        if ($extension === 'pdf') {
             $randomName = Str::random();
             // Store PDF previews alongside image thumbnails for consistency
             $thumbPath = Auth::user()->selected_tenant_id . '/thumbnails/pdf_' . $randomName . '.jpg';
-            $fullPdfPath = $path;
             $fullPreviewPath = Storage::disk($disk)->path($thumbPath);
-
-            if (env('APP_ENV') === 'local') {
-                putenv('PATH=/opt/homebrew/bin:' . getenv('PATH'));
-            }
 
             Storage::disk($disk)->makeDirectory(Auth::user()->selected_tenant_id . '/thumbnails');
 
-            $imagickClass = 'Imagick';
-            if (class_exists($imagickClass)) {
-                try {
-                    $imagick = new $imagickClass();
-                    $imagick->setOption('gs:MaxBitmap', '1000000000'); // Increase to 1GB
-                    $imagick->setResolution(150, 150);
-                    $imagick->readImage($fullPdfPath . '[0]');
-                    $imagick->setImageFormat('jpg');
-                    $imagick->writeImage($fullPreviewPath);
-                    $imagick->clear();
-                    $imagick->destroy();
-                } catch (\Throwable $e) {
-                    // Imagick may fail if the server policy blocks the PDF
-                    // coder (common on Ubuntu/Debian default ImageMagick
-                    // installs). In that case we still want the upload to
-                    // succeed — just without a thumbnail.
-                    Log::warning('PDF preview generation failed, upload continues without thumbnail.', [
-                        'file' => $file['name'] ?? null,
-                        'error' => $e->getMessage(),
-                    ]);
-                    $thumbPath = null;
-                }
-            } else {
-                // Imagick not available, skip PDF preview
+            if (! $this->generatePdfThumbnail($path, $fullPreviewPath)) {
                 $thumbPath = null;
             }
         }
 
         return $thumbPath ?? null;
+    }
+
+    /**
+     * Rasterize page 1 of a PDF to a JPG using pdftoppm (poppler-utils).
+     *
+     * Returns true on success. Logs a warning and returns false on any failure
+     * so callers can decide to continue without a thumbnail.
+     */
+    private function generatePdfThumbnail(string $sourcePath, string $destinationPath): bool
+    {
+        // pdftoppm -singlefile appends ".jpg" itself — pass the prefix without extension.
+        $outputPrefix = preg_replace('/\.jpe?g$/i', '', $destinationPath);
+
+        $process = new Process([
+            'pdftoppm',
+            '-jpeg',
+            '-r', '150',
+            '-f', '1',
+            '-l', '1',
+            '-singlefile',
+            $sourcePath,
+            $outputPrefix,
+        ]);
+
+        // PHP-FPM / queue workers under Herd don't inherit Homebrew's PATH,
+        // mirroring the previous workaround used with Imagick's Ghostscript delegate.
+        if (app()->environment('local')) {
+            $process->setEnv(['PATH' => '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin']);
+        }
+
+        try {
+            $process->mustRun();
+        } catch (ProcessFailedException $e) {
+            Log::warning('PDF thumbnail generation failed, continuing without thumbnail.', [
+                'source' => $sourcePath,
+                'command' => $process->getCommandLine(),
+                'stderr' => $process->getErrorOutput(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        return file_exists($destinationPath);
     }
 }
