@@ -7,9 +7,11 @@ use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
+use Noerd\Traits\ShowFromFilterTrait;
 
 new class extends Component {
     use NoerdList;
+    use ShowFromFilterTrait;
 
     public array $files = [];
     public ?Media $selected = null;
@@ -18,6 +20,8 @@ new class extends Component {
     public bool $selectMode = false;
     public ?string $selectContext = null;
     public ?string $selectToken = null;
+    public bool $bulkSelectMode = false;
+    public array $selectedMediaIds = [];
 
     public function mount(): void
     {
@@ -29,15 +33,70 @@ new class extends Component {
         }
     }
 
+    protected function getShowFromListFilter(): array
+    {
+        return [
+            'label' => __('media_label_uploaded_from'),
+            'column' => 'show_from',
+            'type' => 'ShowFrom',
+            'options' => $this->getDateFilterOptions(),
+        ];
+    }
+
+    protected function getShowUntilListFilter(): array
+    {
+        return [
+            'label' => __('media_label_uploaded_until'),
+            'column' => 'show_until',
+            'type' => 'ShowUntil',
+            'options' => $this->getDateFilterOptions(),
+        ];
+    }
+
+    protected function getExtensionListFilter(): ?array
+    {
+        // Extensions are tenant-scoped automatically via Media's TenantScope.
+        $extensions = Media::query()
+            ->whereNotNull('extension')
+            ->where('extension', '!=', '')
+            ->distinct()
+            ->orderBy('extension')
+            ->pluck('extension')
+            ->toArray();
+
+        if ($extensions === []) {
+            return null;
+        }
+
+        $options = [null => __('media_all_types')];
+        foreach ($extensions as $extension) {
+            $options[$extension] = '.' . mb_strtolower($extension);
+        }
+
+        return [
+            'label' => __('media_label_type'),
+            'column' => 'extension',
+            'type' => 'Picklist',
+            'options' => $options,
+        ];
+    }
+
     public function with(): array
     {
         $baseQuery = Media::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
+            ->when($this->search, function ($query): void {
+                $search = '%' . $this->search . '%';
+                $query->where(function ($q) use ($search): void {
+                    $q->where('name', 'like', $search)
+                        ->orWhere('ocr_text', 'like', $search);
+                });
+            })
             ->when(count($this->filterTagIds) > 0, function ($query): void {
                 foreach ($this->filterTagIds as $tagId) {
                     $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));
                 }
-            });
+            })
+            ->tap(fn($query) => $this->applyListFilters($query));
 
         $rows = (clone $baseQuery)->latest()->limit($this->perPage)->get();
 
@@ -117,6 +176,57 @@ new class extends Component {
         }
     }
 
+    public function enterBulkSelectMode(): void
+    {
+        $this->bulkSelectMode = true;
+        $this->selectedMediaIds = [];
+    }
+
+    public function exitBulkSelectMode(): void
+    {
+        $this->bulkSelectMode = false;
+        $this->selectedMediaIds = [];
+    }
+
+    public function toggleMediaSelection(int $id): void
+    {
+        if (in_array($id, $this->selectedMediaIds, true)) {
+            $this->selectedMediaIds = array_values(
+                array_diff($this->selectedMediaIds, [$id])
+            );
+        } else {
+            $this->selectedMediaIds[] = $id;
+        }
+    }
+
+    public function deleteSelectedMedia(): void
+    {
+        if ($this->selectedMediaIds === []) {
+            return;
+        }
+
+        // $this->selected is a Livewire lazy proxy for an Eloquent model.
+        // Touching its attributes after the underlying record is deleted
+        // would cause Livewire's hydration closure to call firstOrFail() on
+        // a missing record, throwing ModelNotFoundException (HTTP 404).
+        // So we capture the id and clear the property BEFORE the deletion.
+        $currentSelectedId = $this->selected?->id;
+        if ($currentSelectedId !== null && in_array($currentSelectedId, $this->selectedMediaIds, true)) {
+            $this->selected = null;
+        }
+
+        // The Media model has a TenantScope global scope, so this query
+        // is automatically restricted to the current tenant.
+        $items = Media::whereIn('id', $this->selectedMediaIds)->get();
+
+        foreach ($items as $media) {
+            Storage::disk($media->disk)->delete($media->path);
+            $media->delete();
+        }
+
+        $this->exitBulkSelectMode();
+    }
+
     public function chooseMedia(int $id): void
     {
         if (! $this->selectMode) {
@@ -169,9 +279,11 @@ new class extends Component {
         }
     }
 
-    public function clearFilters(): void
+    public function clearAllFilters(): void
     {
+        $this->search = '';
         $this->filterTagIds = [];
+        $this->clearAllListFilters();
     }
 
     public function loadMore(): void
@@ -198,41 +310,122 @@ new class extends Component {
                 />
             </div>
 
-            {{-- Tag Filter --}}
-            <div class="p-4 pt-2">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm text-gray-600 mr-2">{{ __('Filter by tags:') }}</span>
-                    @foreach($tags as $tag)
-                        <button type="button"
-                                wire:click="toggleFilterTag({{ $tag->id }})"
-                                @class([
-                                    'text-sm border px-2 py-1 rounded',
-                                    'bg-gray-800 text-white border-gray-800' => in_array($tag->id, $filterTagIds, true),
-                                    'bg-white hover:bg-gray-50' => ! in_array($tag->id, $filterTagIds, true),
-                                ])>
-                            {{ $tag->name }} ({{ $tag->medias_count }})
-                        </button>
-                    @endforeach
-                    @if(count($filterTagIds) > 0)
-                        <button type="button" wire:click="clearFilters" class="text-sm ml-auto text-gray-600 hover:text-black">
-                            {{ __('Clear filters') }}
-                        </button>
-                    @endif
+            {{-- Search + Filters Row --}}
+            @php
+                $tableFilters = $this->tableFilters();
+                $hasActiveFilters = $search !== ''
+                    || count($filterTagIds) > 0
+                    || collect($listFilters)->filter()->isNotEmpty();
+            @endphp
+            <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
+                <div class="relative">
+                    <x-noerd::text-input
+                        wire:model.live.debounce.300ms="search"
+                        type="text"
+                        placeholder="{{ __('Search') }}"
+                        class="!mt-0 h-[30px] min-w-[200px]"/>
                 </div>
+                @foreach($tableFilters as $tableFilter)
+                    @if(in_array($tableFilter['type'] ?? 'Picklist', ['ShowFrom', 'ShowUntil']))
+                        <x-noerd::filters.date-dropdown
+                            :filter="$tableFilter"
+                            :value="$listFilters[$tableFilter['column']] ?? ''"/>
+                    @else
+                        <x-noerd::filters.picklist
+                            :filter="$tableFilter"
+                            :value="$listFilters[$tableFilter['column']] ?? ''"/>
+                    @endif
+                @endforeach
+                @if($hasActiveFilters)
+                    <button type="button" wire:click="clearAllFilters"
+                            class="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap">
+                        {{ __('noerd_clear_filters') }}
+                    </button>
+                @endif
             </div>
+
+            {{-- Bulk Select Toolbar --}}
+            <div class="px-4 pt-4 flex items-center gap-2">
+                @if(! $bulkSelectMode)
+                    <button type="button"
+                            wire:click="enterBulkSelectMode"
+                            class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                        {{ __('media_select') }}
+                    </button>
+                @else
+                    <button type="button"
+                            wire:click="exitBulkSelectMode"
+                            class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                        {{ __('Cancel') }}
+                    </button>
+                    <span class="text-sm text-gray-600">
+                        {{ __('media_selected_count', ['count' => count($selectedMediaIds)]) }}
+                    </span>
+                    <x-noerd::buttons.delete wire:confirm="{{ __('Really delete selected?') }}"
+                                             wire:click="deleteSelectedMedia"
+                                             :disabled="count($selectedMediaIds) === 0">
+                        {{ __('Delete selected') }}
+                    </x-noerd::buttons.delete>
+                @endif
+            </div>
+
+            {{-- Tag Filter --}}
+            @if($tags->isNotEmpty())
+                <div class="p-4 pt-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-600 mr-2">{{ __('Filter by tags:') }}</span>
+                        @foreach($tags as $tag)
+                            <button type="button"
+                                    wire:click="toggleFilterTag({{ $tag->id }})"
+                                    @class([
+                                        'text-sm border px-2 py-1 rounded',
+                                        'bg-gray-800 text-white border-gray-800' => in_array($tag->id, $filterTagIds, true),
+                                        'bg-white hover:bg-gray-50' => ! in_array($tag->id, $filterTagIds, true),
+                                    ])>
+                                {{ $tag->name }} ({{ $tag->medias_count }})
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             {{-- Media Items --}}
             <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
                 @foreach($listConfig['rows'] as $row)
-                    <a wire:click="{{ $selectMode ? 'chooseMedia' : 'selectMedia' }}({{ $row->id }})"
+                    @php
+                        $isMultiSelected = in_array($row->id, $selectedMediaIds, true);
+                        $clickAction = $bulkSelectMode
+                            ? "toggleMediaSelection({$row->id})"
+                            : ($selectMode ? "chooseMedia({$row->id})" : "selectMedia({$row->id})");
+                    @endphp
+                    <a wire:click="{{ $clickAction }}"
+                       wire:key="media-tile-{{ $row->id }}"
                        @class([
                            'relative cursor-pointer w-full aspect-square p-4',
-                           'border-2 border-blue-500 ring-2 ring-blue-200' => $selected?->id === $row->id,
-                           'border border-b-gray-400 hover:bg-gray-100' => $selected?->id !== $row->id,
+                           'border-2 border-blue-500 ring-2 ring-blue-200' => $bulkSelectMode
+                               ? $isMultiSelected
+                               : $selected?->id === $row->id,
+                           'border border-b-gray-400 hover:bg-gray-100' => $bulkSelectMode
+                               ? ! $isMultiSelected
+                               : $selected?->id !== $row->id,
                        ])>
                         <img src="{{ Storage::disk($row->disk)->url($row->thumbnail ?? $row->path) }}"
                              alt="{{ $row->name }}"
                              class="absolute inset-0 w-full h-full p-4 object-cover rounded-lg"/>
+                        @if($bulkSelectMode)
+                            <div @class([
+                                'absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center pointer-events-none',
+                                'bg-blue-500 border-blue-500' => $isMultiSelected,
+                                'bg-white border-gray-400' => ! $isMultiSelected,
+                            ])>
+                                @if($isMultiSelected)
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none"
+                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                @endif
+                            </div>
+                        @endif
                         @if($row->ai_error_count > 0)
                             <div class="absolute bg-red-300 text-red-800 p-2 px-4 rounded-full">
                                 {{ $row->ai_error_count }}

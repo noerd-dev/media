@@ -42,10 +42,19 @@
     "Existing tags": "Existing tags",
     "Tags": "Tags",
     "Really delete?": "Really delete?",
+    "Cancel": "Cancel",
+    "Delete selected": "Delete selected",
+    "Really delete selected?": "Really delete selected media?",
 
     "media_nav_images": "Images",
     "media_nav_files": "Files",
 
     "media_title": "Media",
-    "media_new_file": "New Media File"
+    "media_new_file": "New Media File",
+    "media_select": "Select",
+    "media_selected_count": ":count selected",
+    "media_label_type": "Type",
+    "media_all_types": "All types",
+    "media_label_uploaded_from": "Uploaded from",
+    "media_label_uploaded_until": "Uploaded until"
 }

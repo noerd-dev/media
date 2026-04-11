@@ -42,12 +42,21 @@
     "Existing tags": "Vorhandene Tags",
     "Tags": "Tags",
     "Really delete?": "Wirklich löschen?",
+    "Cancel": "Abbrechen",
+    "Delete selected": "Auswahl löschen",
+    "Really delete selected?": "Ausgewählte Medien wirklich löschen?",
 
     "media_nav_images": "Bilder",
     "media_nav_files": "Dateien",
 
     "media_title": "Medien",
-    "media_new_file": "Neue Mediendatei"
+    "media_new_file": "Neue Mediendatei",
+    "media_select": "Auswählen",
+    "media_selected_count": ":count ausgewählt",
+    "media_label_type": "Typ",
+    "media_all_types": "Alle Typen",
+    "media_label_uploaded_from": "Upload ab",
+    "media_label_uploaded_until": "Upload bis"
 }
 
 

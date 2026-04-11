@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Models\NoerdUser;
+use Noerd\Models\Tenant;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -123,4 +124,244 @@ it('deletes media and removes file from disk', function (): void {
 
     expect(Media::find($media->id))->toBeNull();
     expect(Storage::disk('media')->exists($path))->toBeFalse();
+});
+
+it('toggles bulk select mode and resets selection on exit', function (): void {
+    Livewire::test('media-list')
+        ->assertSet('bulkSelectMode', false)
+        ->assertSet('selectedMediaIds', [])
+        ->call('enterBulkSelectMode')
+        ->assertSet('bulkSelectMode', true)
+        ->assertSet('selectedMediaIds', [])
+        ->call('toggleMediaSelection', 42)
+        ->assertSet('selectedMediaIds', [42])
+        ->call('toggleMediaSelection', 99)
+        ->assertSet('selectedMediaIds', [42, 99])
+        ->call('toggleMediaSelection', 42)
+        ->assertSet('selectedMediaIds', [99])
+        ->call('exitBulkSelectMode')
+        ->assertSet('bulkSelectMode', false)
+        ->assertSet('selectedMediaIds', []);
+});
+
+it('deletes multiple selected media items and removes their files', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $items = collect(['a.jpg', 'b.jpg', 'c.jpg'])->map(function (string $name) use ($tenantId): Media {
+        $path = $tenantId . '/' . $name;
+        Storage::disk('media')->put($path, 'x');
+
+        return Media::create([
+            'tenant_id' => $tenantId,
+            'type' => 'image',
+            'name' => $name,
+            'extension' => 'jpg',
+            'path' => $path,
+            'disk' => 'media',
+            'size' => 1,
+        ]);
+    });
+
+    $toDelete = [$items[0]->id, $items[2]->id];
+
+    Livewire::test('media-list')
+        ->call('enterBulkSelectMode')
+        ->set('selectedMediaIds', $toDelete)
+        ->call('deleteSelectedMedia')
+        ->assertSet('bulkSelectMode', false)
+        ->assertSet('selectedMediaIds', []);
+
+    expect(Media::find($items[0]->id))->toBeNull();
+    expect(Media::find($items[1]->id))->not->toBeNull();
+    expect(Media::find($items[2]->id))->toBeNull();
+    expect(Storage::disk('media')->exists($items[0]->path))->toBeFalse();
+    expect(Storage::disk('media')->exists($items[1]->path))->toBeTrue();
+    expect(Storage::disk('media')->exists($items[2]->path))->toBeFalse();
+});
+
+it('clears the detail panel when bulk-deleting includes the currently selected media', function (): void {
+    // Regression: $this->selected is a Livewire lazy proxy for an Eloquent
+    // model. If we delete the underlying record and a follow-up Livewire
+    // round-trip touches $this->selected, the proxy's hydration closure
+    // calls firstOrFail() on the missing record and throws → HTTP 404.
+    $tenantId = $this->user->selected_tenant_id;
+
+    $items = collect(['a.jpg', 'b.jpg', 'c.jpg'])->map(function (string $name) use ($tenantId): Media {
+        $path = $tenantId . '/' . $name;
+        Storage::disk('media')->put($path, 'x');
+
+        return Media::create([
+            'tenant_id' => $tenantId,
+            'type' => 'image',
+            'name' => $name,
+            'extension' => 'jpg',
+            'path' => $path,
+            'disk' => 'media',
+            'size' => 1,
+        ]);
+    });
+
+    $component = Livewire::test('media-list')
+        ->call('selectMedia', $items[0]->id)
+        ->call('enterBulkSelectMode')
+        ->call('toggleMediaSelection', $items[0]->id)
+        ->call('toggleMediaSelection', $items[1]->id)
+        ->call('deleteSelectedMedia')
+        ->assertSet('selected', null);
+
+    // Follow-up round-trip must not 404 (would happen if Livewire's lazy
+    // proxy still pointed at a deleted record).
+    $component->call('loadMore');
+
+    expect(Media::find($items[0]->id))->toBeNull();
+    expect(Media::find($items[1]->id))->toBeNull();
+    expect(Media::find($items[2]->id))->not->toBeNull();
+});
+
+it('searches media by name and ocr_text', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $byName = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'invoice-march.pdf',
+        'extension' => 'pdf', 'path' => $tenantId . '/a.pdf', 'disk' => 'media', 'size' => 1,
+    ]);
+    $byOcr = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'random.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/b.jpg', 'disk' => 'media', 'size' => 1,
+        'ocr_text' => 'Quarterly invoice for Acme Corp',
+    ]);
+    $unrelated = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'photo.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/c.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+
+    $component = Livewire::test('media-list')->set('search', 'invoice');
+    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
+
+    expect($ids)->toContain($byName->id, $byOcr->id);
+    expect($ids)->not->toContain($unrelated->id);
+});
+
+it('filters media by extension via the listFilters picklist', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $jpg = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'a.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/a.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+    $pdf = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'b.pdf',
+        'extension' => 'pdf', 'path' => $tenantId . '/b.pdf', 'disk' => 'media', 'size' => 1,
+    ]);
+
+    $component = Livewire::test('media-list')
+        ->set('listFilters.extension', 'pdf');
+
+    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
+
+    expect($ids)->toContain($pdf->id);
+    expect($ids)->not->toContain($jpg->id);
+});
+
+it('filters media by upload date range using show_from and show_until', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $old = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'old.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/old.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+    $old->created_at = now()->subMonths(2);
+    $old->save();
+
+    $recent = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'recent.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/recent.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+    $recent->created_at = now()->subDays(2);
+    $recent->save();
+
+    $future = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'future.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/future.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+    $future->created_at = now()->addDays(2);
+    $future->save();
+
+    $component = Livewire::test('media-list')
+        ->set('listFilters.show_from', 'this_week')
+        ->set('listFilters.show_until', now()->addDay()->toDateString());
+
+    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
+
+    expect($ids)->toContain($recent->id);
+    expect($ids)->not->toContain($old->id);
+    expect($ids)->not->toContain($future->id);
+});
+
+it('exposes an extension filter with the distinct extensions of the current tenant', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    foreach (['jpg', 'pdf', 'jpg', 'png'] as $i => $ext) {
+        Media::create([
+            'tenant_id' => $tenantId, 'type' => 'image', 'name' => "f{$i}.{$ext}",
+            'extension' => $ext, 'path' => $tenantId . "/f{$i}.{$ext}", 'disk' => 'media', 'size' => 1,
+        ]);
+    }
+
+    $filters = Livewire::test('media-list')->instance()->tableFilters;
+    $extensionFilter = collect($filters)->firstWhere('column', 'extension');
+
+    expect($extensionFilter)->not->toBeNull();
+    // PHP casts a null array key to '' — that's the "All types" placeholder
+    // option used by Picklist filters (mirrors BankAccountFilterTrait).
+    expect(array_keys($extensionFilter['options']))->toBe(['', 'jpg', 'pdf', 'png']);
+});
+
+it('omits the extension filter entirely when no media exists', function (): void {
+    $filters = Livewire::test('media-list')->instance()->tableFilters;
+
+    expect(collect($filters)->firstWhere('column', 'extension'))->toBeNull();
+});
+
+it('clears search, tag filters and listFilters via clearAllFilters', function (): void {
+    $component = Livewire::test('media-list')
+        ->set('search', 'foo')
+        ->set('filterTagIds', [1, 2])
+        ->set('listFilters.extension', 'pdf')
+        ->call('clearAllFilters');
+
+    $component->assertSet('search', '')
+        ->assertSet('filterTagIds', [])
+        ->assertSet('listFilters', []);
+});
+
+it('does not delete media from other tenants even if id is in selection', function (): void {
+    $otherTenant = Tenant::factory()->create();
+
+    $ownPath = $this->user->selected_tenant_id . '/own.jpg';
+    Storage::disk('media')->put($ownPath, 'x');
+    $own = Media::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'type' => 'image', 'name' => 'own.jpg', 'extension' => 'jpg', 'path' => $ownPath, 'disk' => 'media', 'size' => 1,
+    ]);
+
+    $foreignPath = $otherTenant->id . '/foreign.jpg';
+    Storage::disk('media')->put($foreignPath, 'x');
+    $foreign = Media::create([
+        'tenant_id' => $otherTenant->id,
+        'type' => 'image', 'name' => 'foreign.jpg', 'extension' => 'jpg', 'path' => $foreignPath, 'disk' => 'media', 'size' => 1,
+    ]);
+
+    Livewire::test('media-list')
+        ->call('enterBulkSelectMode')
+        ->set('selectedMediaIds', [$own->id, $foreign->id])
+        ->call('deleteSelectedMedia');
+
+    // Use withoutGlobalScopes() because Media has a TenantScope that would
+    // hide foreign-tenant rows from a normal find() call.
+    expect(Media::withoutGlobalScopes()->find($own->id))->toBeNull();
+    expect(Storage::disk('media')->exists($ownPath))->toBeFalse();
+
+    expect(Media::withoutGlobalScopes()->find($foreign->id))->not->toBeNull();
+    expect(Storage::disk('media')->exists($foreignPath))->toBeTrue();
 });
