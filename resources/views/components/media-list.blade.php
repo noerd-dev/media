@@ -25,7 +25,6 @@ new class extends Component {
     public bool $bulkSelectMode = false;
     public array $selectedMediaIds = [];
     public ?int $currentFolderId = null;
-    public string $newFolderName = '';
 
     public function mount(): void
     {
@@ -325,20 +324,20 @@ new class extends Component {
         $this->resetPage();
     }
 
-    public function createFolder(): void
+    public function openCreateFolderModal(): void
     {
-        $name = trim($this->newFolderName);
-        if ($name === '') {
-            return;
-        }
+        $this->dispatch(
+            event: 'noerdModal',
+            modalComponent: 'media-folder-create',
+            source: $this->getComponentName(),
+            arguments: ['parentFolderId' => $this->currentFolderId],
+        );
+    }
 
-        MediaFolder::create([
-            'tenant_id' => Auth::user()->selected_tenant_id,
-            'parent_id' => $this->currentFolderId,
-            'name' => $name,
-        ]);
-
-        $this->newFolderName = '';
+    #[On('mediaFolderCreated')]
+    public function refreshAfterFolderCreated(): void
+    {
+        // Livewire re-renders on event handling; no other action needed.
     }
 
     public function deleteFolder(int $folderId): void
@@ -420,7 +419,7 @@ new class extends Component {
                 </div>
             </div>
 
-            {{-- Breadcrumb + Folder Creator (hidden when filters are active) --}}
+            {{-- Breadcrumb (hidden when filters are active) --}}
             @unless($hasActiveFilters)
                 <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
                     <nav class="flex items-center gap-2 text-sm">
@@ -438,20 +437,6 @@ new class extends Component {
                             </button>
                         @endforeach
                     </nav>
-
-                    <div class="flex items-center gap-2 ml-auto">
-                        <x-noerd::text-input
-                            wire:model="newFolderName"
-                            wire:keydown.enter="createFolder"
-                            type="text"
-                            placeholder="{{ __('media_folder_name') }}"
-                            class="!mt-0 h-[30px] min-w-[160px]"/>
-                        <button type="button"
-                                wire:click="createFolder"
-                                class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                            {{ __('media_create_folder') }}
-                        </button>
-                    </div>
                 </div>
             @endunless
 
@@ -560,6 +545,19 @@ new class extends Component {
                                 title="{{ __('Delete') }}">×</button>
                     </div>
                 @endforeach
+                @unless($hasActiveFilters)
+                    <div wire:key="folder-tile-create"
+                         class="relative w-full aspect-square p-4 border border-dashed border-gray-400 hover:bg-gray-100">
+                        <button type="button"
+                                wire:click="openCreateFolderModal"
+                                class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer text-gray-500 hover:text-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ __('media_new_folder') }}</span>
+                        </button>
+                    </div>
+                @endunless
                 @foreach($listConfig['rows'] as $row)
                     @php
                         $isMultiSelected = in_array($row->id, $selectedMediaIds, true);
@@ -613,12 +611,31 @@ new class extends Component {
             <div class="col-span-2 p-4 bg-gray-100">
                 <div class="sticky top-[47px]">
                     @if($selected)
+                        @php
+                            $fileUrl = Storage::disk($selected->disk)->url($selected->path);
+                        @endphp
                         <img alt="{{ $selected->name }}"
                              src="{{ Storage::disk($selected->disk)->url($selected->thumbnail ?? $selected->path) }}"
                              class="w-full"/>
+                        <div class="pt-4 flex flex-wrap items-center gap-2">
+                            <a href="{{ $fileUrl }}"
+                               target="_blank"
+                               rel="noopener"
+                               class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                                {{ __('media_open_in_new_tab') }}
+                            </a>
+                            <a href="{{ $fileUrl }}"
+                               download="{{ $selected->name }}"
+                               class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                                {{ __('media_download') }}
+                            </a>
+                        </div>
                         <div class="pt-4">{{ $selected->name }}</div>
                         <div class="text-gray-500">{{ $selected->size }}</div>
-                        <div class="text-gray-500">{{ $selected->created_at }}</div>
+                        <div class="text-gray-500">
+                            <span class="font-semibold">{{ __('Created') }}:</span>
+                            {{ \Carbon\Carbon::parse($selected->created_at)->format('d.m.Y H:i') }}
+                        </div>
 
                         @if($selected->ocr_text)
                             <div class="pt-4">{!! nl2br($selected->ocr_text) !!}</div>

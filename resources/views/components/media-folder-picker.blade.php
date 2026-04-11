@@ -65,7 +65,7 @@ new class extends Component {
         <x-noerd::modal-title>{{ __('media_select_target_folder') }}</x-noerd::modal-title>
     </x-slot:header>
 
-    <div class="mt-4 space-y-2">
+    <div class="py-6 space-y-2">
         <button type="button"
                 wire:click="selectFolder(null)"
                 @class([
@@ -83,20 +83,18 @@ new class extends Component {
         @endif
     </div>
 
-    <div class="mt-6 flex items-center justify-end gap-2">
-        <button type="button"
-                wire:click="$dispatch('closeTopModal')"
-                class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-            {{ __('Cancel') }}
-        </button>
-        <button type="button"
+    <x-slot name="footer">
+        @php($isDisabled = count($mediaIds) === 0)
+        <div class="ml-auto flex gap-2">
+            <x-noerd::secondary-button wire:click="$dispatch('closeTopModal')">
+                {{ __('Cancel') }}
+            </x-noerd::secondary-button>
+
+            <x-noerd::buttons.primary
                 wire:click="confirm"
-                @class([
-                    'text-sm border px-3 py-1 rounded bg-brand-primary text-white hover:opacity-90',
-                    'opacity-50 cursor-not-allowed' => count($mediaIds) === 0,
-                ])
-                @disabled(count($mediaIds) === 0)>
-            {{ __('media_move_to_folder') }}
-        </button>
-    </div>
+                :class="$isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''">
+                {{ __('media_move_to_folder') }}
+            </x-noerd::buttons.primary>
+        </div>
+    </x-slot>
 </x-noerd::page>

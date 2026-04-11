@@ -28,10 +28,12 @@ function makeMedia(int $tenantId, ?int $folderId = null, string $name = 'foo.jpg
     ]);
 }
 
-it('creates a folder at root', function (): void {
-    Livewire::test('media-list')
-        ->set('newFolderName', 'Documents')
-        ->call('createFolder');
+it('creates a folder at root via the create-folder modal', function (): void {
+    Livewire::test('media-folder-create', ['parentFolderId' => null])
+        ->set('name', 'Documents')
+        ->call('store')
+        ->assertDispatched('mediaFolderCreated')
+        ->assertDispatched('closeTopModal');
 
     $folder = MediaFolder::where('tenant_id', $this->user->selected_tenant_id)->first();
     expect($folder)->not->toBeNull()
@@ -39,7 +41,38 @@ it('creates a folder at root', function (): void {
         ->and($folder->parent_id)->toBeNull();
 });
 
-it('creates a nested folder under the current folder', function (): void {
+it('creates a nested folder under the current folder via the create-folder modal', function (): void {
+    $parent = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Parent',
+    ]);
+
+    Livewire::test('media-folder-create', ['parentFolderId' => $parent->id])
+        ->set('name', 'Child')
+        ->call('store')
+        ->assertDispatched('mediaFolderCreated')
+        ->assertDispatched('closeTopModal');
+
+    $child = MediaFolder::where('tenant_id', $this->user->selected_tenant_id)
+        ->where('name', 'Child')
+        ->first();
+
+    expect($child)->not->toBeNull()
+        ->and($child->parent_id)->toBe($parent->id);
+});
+
+it('does not create a folder when the name is empty', function (): void {
+    Livewire::test('media-folder-create', ['parentFolderId' => null])
+        ->set('name', '')
+        ->call('store')
+        ->assertHasErrors(['name' => 'required'])
+        ->assertNotDispatched('mediaFolderCreated');
+
+    expect(MediaFolder::count())->toBe(0);
+});
+
+it('opens the create-folder modal with the current folder as parent', function (): void {
     $parent = MediaFolder::create([
         'tenant_id' => $this->user->selected_tenant_id,
         'parent_id' => null,
@@ -48,15 +81,12 @@ it('creates a nested folder under the current folder', function (): void {
 
     Livewire::test('media-list')
         ->call('openFolder', $parent->id)
-        ->set('newFolderName', 'Child')
-        ->call('createFolder');
-
-    $child = MediaFolder::where('tenant_id', $this->user->selected_tenant_id)
-        ->where('name', 'Child')
-        ->first();
-
-    expect($child)->not->toBeNull()
-        ->and($child->parent_id)->toBe($parent->id);
+        ->call('openCreateFolderModal')
+        ->assertDispatched(
+            'noerdModal',
+            modalComponent: 'media-folder-create',
+            arguments: ['parentFolderId' => $parent->id],
+        );
 });
 
 it('builds a breadcrumb walking up parents', function (): void {
