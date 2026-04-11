@@ -84,13 +84,7 @@ new class extends Component {
     public function with(): array
     {
         $baseQuery = Media::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->when($this->search, function ($query): void {
-                $search = '%' . $this->search . '%';
-                $query->where(function ($q) use ($search): void {
-                    $q->where('name', 'like', $search)
-                        ->orWhere('ocr_text', 'like', $search);
-                });
-            })
+            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
             ->when(count($this->filterTagIds) > 0, function ($query): void {
                 foreach ($this->filterTagIds as $tagId) {
                     $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));

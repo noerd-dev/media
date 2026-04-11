@@ -218,17 +218,12 @@ it('clears the detail panel when bulk-deleting includes the currently selected m
     expect(Media::find($items[2]->id))->not->toBeNull();
 });
 
-it('searches media by name and ocr_text', function (): void {
+it('searches media by name', function (): void {
     $tenantId = $this->user->selected_tenant_id;
 
-    $byName = Media::create([
+    $match = Media::create([
         'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'invoice-march.pdf',
         'extension' => 'pdf', 'path' => $tenantId . '/a.pdf', 'disk' => 'media', 'size' => 1,
-    ]);
-    $byOcr = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'random.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/b.jpg', 'disk' => 'media', 'size' => 1,
-        'ocr_text' => 'Quarterly invoice for Acme Corp',
     ]);
     $unrelated = Media::create([
         'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'photo.jpg',
@@ -238,7 +233,7 @@ it('searches media by name and ocr_text', function (): void {
     $component = Livewire::test('media-list')->set('search', 'invoice');
     $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
 
-    expect($ids)->toContain($byName->id, $byOcr->id);
+    expect($ids)->toContain($match->id);
     expect($ids)->not->toContain($unrelated->id);
 });
 
