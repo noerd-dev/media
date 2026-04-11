@@ -166,6 +166,53 @@ it('moves a file out of a folder back to root', function (): void {
     expect($media->fresh()->folder_id)->toBeNull();
 });
 
+it('uploads files into the current folder', function (): void {
+    $folder = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Uploads',
+    ]);
+
+    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
+    file_put_contents($tmpFile, 'fake content');
+
+    $filePayload = [
+        'name' => 'in-folder.jpg',
+        'extension' => 'txt',
+        'size' => 12,
+        'path' => $tmpFile,
+    ];
+
+    Livewire::test('media-list')
+        ->call('openFolder', $folder->id)
+        ->set('files', [$filePayload])
+        ->call('store');
+
+    $media = Media::where('name', 'in-folder.jpg')->first();
+    expect($media)->not->toBeNull()
+        ->and($media->folder_id)->toBe($folder->id);
+});
+
+it('uploads files at root with null folder_id when no folder selected', function (): void {
+    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
+    file_put_contents($tmpFile, 'fake content');
+
+    $filePayload = [
+        'name' => 'at-root.jpg',
+        'extension' => 'txt',
+        'size' => 12,
+        'path' => $tmpFile,
+    ];
+
+    Livewire::test('media-list')
+        ->set('files', [$filePayload])
+        ->call('store');
+
+    $media = Media::where('name', 'at-root.jpg')->first();
+    expect($media)->not->toBeNull()
+        ->and($media->folder_id)->toBeNull();
+});
+
 it('hides folder list when filters are active', function (): void {
     MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Visible']);
 

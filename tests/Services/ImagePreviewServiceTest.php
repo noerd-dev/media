@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Services\ImagePreviewService;
 use Noerd\Models\NoerdUser;
-use Symfony\Component\Process\Process;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
 
@@ -15,21 +14,22 @@ beforeEach(function (): void {
     Storage::fake('media');
 });
 
-function pdftoppmAvailable(): bool
+function pdfRenderingAvailable(): bool
 {
-    $process = new Process(['pdftoppm', '-v']);
-
-    if (app()->environment('local')) {
-        $process->setEnv(['PATH' => '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin']);
-    }
-
-    try {
-        $process->run();
-    } catch (\Throwable $e) {
+    if (! extension_loaded('imagick')) {
         return false;
     }
 
-    return $process->getExitCode() === 0;
+    // Mirror the production service: ensure Imagick can locate Ghostscript under Herd.
+    if (app()->environment('local')) {
+        putenv('PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin');
+    }
+
+    // Imagick::queryFormats('PDF') only reports whether Imagick was built with PDF support,
+    // not whether the Ghostscript delegate is actually reachable. Probe `gs` directly instead.
+    $gsVersion = @shell_exec('gs --version 2>/dev/null');
+
+    return ! empty(trim((string) $gsVersion));
 }
 
 function writeRealPdf(string $absolutePath): void
@@ -39,9 +39,9 @@ function writeRealPdf(string $absolutePath): void
     file_put_contents($absolutePath, $pdf->output());
 }
 
-it('generates a JPG thumbnail for a PDF via pdftoppm', function (): void {
-    if (! pdftoppmAvailable()) {
-        $this->markTestSkipped('pdftoppm is not installed — run `brew install poppler` (or apt-get install poppler-utils).');
+it('generates a JPG thumbnail for a PDF via spatie/pdf-to-image', function (): void {
+    if (! pdfRenderingAvailable()) {
+        $this->markTestSkipped('Imagick with Ghostscript delegate is not available — install Ghostscript (brew install ghostscript) and ensure the imagick PHP extension is loaded.');
     }
 
     $user = NoerdUser::factory()->withExampleTenant()->create();
@@ -73,8 +73,8 @@ it('generates a JPG thumbnail for a PDF via pdftoppm', function (): void {
 });
 
 it('returns null and logs a warning when the PDF cannot be rasterized', function (): void {
-    if (! pdftoppmAvailable()) {
-        $this->markTestSkipped('pdftoppm is not installed — run `brew install poppler` (or apt-get install poppler-utils).');
+    if (! pdfRenderingAvailable()) {
+        $this->markTestSkipped('Imagick with Ghostscript delegate is not available — install Ghostscript (brew install ghostscript) and ensure the imagick PHP extension is loaded.');
     }
 
     Log::spy();

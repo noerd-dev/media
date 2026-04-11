@@ -64,7 +64,8 @@
     "media_folder_name": "Ordnername",
     "media_move_to_folder": "In Ordner verschieben",
     "media_select_target_folder": "Zielordner auswählen",
-    "media_delete_folder_confirm": "Ordner löschen? Inhalte werden in den übergeordneten Ordner verschoben."
+    "media_delete_folder_confirm": "Ordner löschen? Inhalte werden in den übergeordneten Ordner verschoben.",
+    "media_upload_error": "Upload fehlgeschlagen. Die Datei ist möglicherweise zu groß für das Upload-Limit des Servers."
 }
 
 

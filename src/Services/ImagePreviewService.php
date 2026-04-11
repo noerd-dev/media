@@ -6,11 +6,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Imagick;
+use ImagickPixel;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Noerd\Media\Models\Media;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use Throwable;
 
 class ImagePreviewService
 {
@@ -117,44 +118,47 @@ class ImagePreviewService
     }
 
     /**
-     * Rasterize page 1 of a PDF to a JPG using pdftoppm (poppler-utils).
+     * Rasterize page 1 of a PDF to a JPG using Imagick + Ghostscript.
+     *
+     * We use Imagick directly rather than spatie/pdf-to-image because the library's
+     * v1.x API does not let us (a) set the background color before readImage — PDFs
+     * without an opaque background otherwise flatten to black on JPG export — nor
+     * (b) apply setResolution before the PDF is loaded, so the intended DPI is
+     * silently ignored.
      *
      * Returns true on success. Logs a warning and returns false on any failure
      * so callers can decide to continue without a thumbnail.
      */
     private function generatePdfThumbnail(string $sourcePath, string $destinationPath): bool
     {
-        // pdftoppm -singlefile appends ".jpg" itself — pass the prefix without extension.
-        $outputPrefix = preg_replace('/\.jpe?g$/i', '', $destinationPath);
-
-        $process = new Process([
-            'pdftoppm',
-            '-jpeg',
-            '-r', '150',
-            '-f', '1',
-            '-l', '1',
-            '-singlefile',
-            $sourcePath,
-            $outputPrefix,
-        ]);
-
         // PHP-FPM / queue workers under Herd don't inherit Homebrew's PATH,
-        // mirroring the previous workaround used with Imagick's Ghostscript delegate.
+        // so Imagick's Ghostscript delegate can't be resolved without this.
         if (app()->environment('local')) {
-            $process->setEnv(['PATH' => '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin']);
+            putenv('PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin');
         }
 
+        $imagick = new Imagick();
+
         try {
-            $process->mustRun();
-        } catch (ProcessFailedException $e) {
+            // setResolution and setBackgroundColor must be set BEFORE readImage so
+            // they apply to the Ghostscript render pass.
+            $imagick->setResolution(150, 150);
+            $imagick->setBackgroundColor(new ImagickPixel('white'));
+            $imagick->readImage($sourcePath.'[0]');
+            $imagick->setImageBackgroundColor(new ImagickPixel('white'));
+            $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+            $imagick->setImageFormat('jpeg');
+            $imagick->writeImage($destinationPath);
+        } catch (Throwable $e) {
             Log::warning('PDF thumbnail generation failed, continuing without thumbnail.', [
                 'source' => $sourcePath,
-                'command' => $process->getCommandLine(),
-                'stderr' => $process->getErrorOutput(),
+                'destination' => $destinationPath,
                 'error' => $e->getMessage(),
             ]);
 
             return false;
+        } finally {
+            $imagick->clear();
         }
 
         return file_exists($destinationPath);

@@ -173,7 +173,11 @@ new class extends Component {
         $mediaUploadService = app()->make(MediaUploadService::class);
 
         foreach ($this->files as $file) {
-            $mediaUploadService->storeFromArray($file);
+            $media = $mediaUploadService->storeFromArray($file);
+
+            if ($this->currentFolderId !== null) {
+                $media->update(['folder_id' => $this->currentFolderId]);
+            }
         }
 
         $this->files = [];
@@ -396,13 +400,24 @@ new class extends Component {
     <div class="grid grid-cols-6 gap-4">
         {{-- Media Grid --}}
         <div class="{{ $hideDetail ? 'col-span-6' : 'col-span-4' }}">
-            <div class="pt-8">
+            <div class="pt-8"
+                 x-data="{ uploadError: '' }"
+                 @@livewire-upload-error="uploadError = @js(__('media_upload_error'))"
+                 @@livewire-upload-start="uploadError = ''"
+                 @@livewire-upload-finish="uploadError = ''">
                 <livewire:dropzone
                     wire:model.live="files"
                     :rules="['mimes:png,jpg,jpeg,pdf,txt,webp,svg','max:10420']"
                     :key="'files'"
                     :multiple="true"
                 />
+                <div x-show="uploadError"
+                     x-cloak
+                     x-transition
+                     class="mt-2 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700 flex items-start justify-between gap-3">
+                    <span x-text="uploadError"></span>
+                    <button type="button" @click="uploadError = ''" class="text-red-700 hover:text-red-900 font-bold">×</button>
+                </div>
             </div>
 
             {{-- Breadcrumb + Folder Creator (hidden when filters are active) --}}
