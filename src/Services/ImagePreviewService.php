@@ -3,6 +3,7 @@
 namespace Noerd\Media\Services;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -72,14 +73,23 @@ class ImagePreviewService
 
             $imagickClass = 'Imagick';
             if (class_exists($imagickClass)) {
-                $imagick = new $imagickClass();
-                $imagick->setOption('gs:MaxBitmap', '1000000000');
-                $imagick->setResolution(150, 150);
-                $imagick->readImage($sourcePath . '[0]');
-                $imagick->setImageFormat('jpg');
-                $imagick->writeImage($fullPreviewPath);
-                $imagick->clear();
-                $imagick->destroy();
+                try {
+                    $imagick = new $imagickClass();
+                    $imagick->setOption('gs:MaxBitmap', '1000000000');
+                    $imagick->setResolution(150, 150);
+                    $imagick->readImage($sourcePath . '[0]');
+                    $imagick->setImageFormat('jpg');
+                    $imagick->writeImage($fullPreviewPath);
+                    $imagick->clear();
+                    $imagick->destroy();
+                } catch (\Throwable $e) {
+                    Log::warning('PDF thumbnail regeneration failed, skipping preview.', [
+                        'media_id' => $media->id,
+                        'path' => $media->path,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $thumbPath = null;
+                }
             } else {
                 $thumbPath = null;
             }
@@ -127,14 +137,26 @@ class ImagePreviewService
 
             $imagickClass = 'Imagick';
             if (class_exists($imagickClass)) {
-                $imagick = new $imagickClass();
-                $imagick->setOption('gs:MaxBitmap', '1000000000'); // Increase to 1GB
-                $imagick->setResolution(150, 150);
-                $imagick->readImage($fullPdfPath . '[0]');
-                $imagick->setImageFormat('jpg');
-                $imagick->writeImage($fullPreviewPath);
-                $imagick->clear();
-                $imagick->destroy();
+                try {
+                    $imagick = new $imagickClass();
+                    $imagick->setOption('gs:MaxBitmap', '1000000000'); // Increase to 1GB
+                    $imagick->setResolution(150, 150);
+                    $imagick->readImage($fullPdfPath . '[0]');
+                    $imagick->setImageFormat('jpg');
+                    $imagick->writeImage($fullPreviewPath);
+                    $imagick->clear();
+                    $imagick->destroy();
+                } catch (\Throwable $e) {
+                    // Imagick may fail if the server policy blocks the PDF
+                    // coder (common on Ubuntu/Debian default ImageMagick
+                    // installs). In that case we still want the upload to
+                    // succeed — just without a thumbnail.
+                    Log::warning('PDF preview generation failed, upload continues without thumbnail.', [
+                        'file' => $file['name'] ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $thumbPath = null;
+                }
             } else {
                 // Imagick not available, skip PDF preview
                 $thumbPath = null;
