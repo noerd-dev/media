@@ -398,7 +398,29 @@ new class extends Component {
 <x-noerd::page :disableModal="$disableModal">
     <div class="grid grid-cols-6 gap-4">
         {{-- Media Grid --}}
-        <div class="{{ $hideDetail ? 'col-span-6' : 'col-span-4' }}">
+        <div class="{{ $hideDetail ? 'col-span-6' : 'col-span-4' }}"
+             x-data="{
+                 draggedIds: [],
+                 dragOverFolderId: null,
+                 isMoveDrag(e) {
+                     return e.dataTransfer && Array.from(e.dataTransfer.types).includes('application/x-media-move');
+                 },
+                 startDrag(e, id) {
+                     const selected = Array.isArray($wire.selectedMediaIds) ? $wire.selectedMediaIds : [];
+                     this.draggedIds = selected.includes(id) ? [...selected] : [id];
+                     e.dataTransfer.effectAllowed = 'move';
+                     e.dataTransfer.setData('application/x-media-move', JSON.stringify(this.draggedIds));
+                 },
+                 endDrag() {
+                     this.draggedIds = [];
+                     this.dragOverFolderId = null;
+                 },
+                 dropOn(folderId) {
+                     if (this.draggedIds.length === 0) return;
+                     $wire.moveMediaToFolder(this.draggedIds, folderId);
+                     this.endDrag();
+                 }
+             }">
             <div class="pt-8"
                  x-data="{ uploadError: '' }"
                  @@livewire-upload-error="uploadError = @js(__('media_upload_error'))"
@@ -425,6 +447,12 @@ new class extends Component {
                     <nav class="flex items-center gap-2 text-sm">
                         <button type="button"
                                 wire:click="openFolder(null)"
+                                @if($currentFolderId !== null)
+                                    x-on:dragover="if (isMoveDrag($event)) { $event.preventDefault(); dragOverFolderId = 'root'; }"
+                                    x-on:dragleave="if (dragOverFolderId === 'root') dragOverFolderId = null"
+                                    x-on:drop.prevent="dropOn(null)"
+                                    :class="dragOverFolderId === 'root' ? 'bg-blue-100 ring-2 ring-blue-400 rounded px-1' : ''"
+                                @endif
                                 class="hover:underline {{ $currentFolderId === null ? 'font-semibold' : '' }}">
                             {{ __('media_label_root') }}
                         </button>
@@ -432,6 +460,12 @@ new class extends Component {
                             <span class="text-gray-400">/</span>
                             <button type="button"
                                     wire:click="openFolder({{ $crumb['id'] }})"
+                                    @unless($loop->last)
+                                        x-on:dragover="if (isMoveDrag($event)) { $event.preventDefault(); dragOverFolderId = {{ $crumb['id'] }}; }"
+                                        x-on:dragleave="if (dragOverFolderId === {{ $crumb['id'] }}) dragOverFolderId = null"
+                                        x-on:drop.prevent="dropOn({{ $crumb['id'] }})"
+                                        :class="dragOverFolderId === {{ $crumb['id'] }} ? 'bg-blue-100 ring-2 ring-blue-400 rounded px-1' : ''"
+                                    @endunless
                                     class="hover:underline {{ $loop->last ? 'font-semibold' : '' }}">
                                 {{ $crumb['name'] }}
                             </button>
@@ -529,7 +563,11 @@ new class extends Component {
             <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
                 @foreach($folders as $folder)
                     <div wire:key="folder-tile-{{ $folder->id }}"
-                         class="relative w-full aspect-square p-4 border border-b-gray-400 hover:bg-gray-100">
+                         class="relative w-full aspect-square p-4 border border-b-gray-400 hover:bg-gray-100 transition-colors"
+                         :class="dragOverFolderId === {{ $folder->id }} ? 'bg-blue-100 ring-2 ring-blue-400' : ''"
+                         x-on:dragover="if (isMoveDrag($event)) { $event.preventDefault(); dragOverFolderId = {{ $folder->id }}; }"
+                         x-on:dragleave="if (dragOverFolderId === {{ $folder->id }}) dragOverFolderId = null"
+                         x-on:drop.prevent="dropOn({{ $folder->id }})">
                         <button type="button"
                                 wire:click="openFolder({{ $folder->id }})"
                                 class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer">
@@ -567,6 +605,12 @@ new class extends Component {
                     @endphp
                     <a wire:click="{{ $clickAction }}"
                        wire:key="media-tile-{{ $row->id }}"
+                       @if(! $selectMode)
+                           draggable="true"
+                           x-on:dragstart="startDrag($event, {{ $row->id }})"
+                           x-on:dragend="endDrag()"
+                           :class="draggedIds.includes({{ $row->id }}) ? 'opacity-50' : ''"
+                       @endif
                        @class([
                            'relative cursor-pointer w-full aspect-square p-4',
                            'border-2 border-blue-500 ring-2 ring-blue-200' => $bulkSelectMode
