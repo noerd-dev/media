@@ -5,8 +5,9 @@
     "version": "v0.1.1",
 	"license": "proprietary",
 	"require": {
-        "noerd/noerd": "^0.4",
-        "intervention/image": "^3.11"
+        "noerd/noerd": "^0.5",
+        "intervention/image": "^3.11",
+        "ext-imagick": "*"
     },
     "autoload": {
         "psr-4": {

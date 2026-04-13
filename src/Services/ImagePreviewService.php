@@ -3,7 +3,6 @@
 namespace Noerd\Media\Services;
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Imagick;
@@ -11,7 +10,6 @@ use ImagickPixel;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Noerd\Media\Models\Media;
-use Throwable;
 
 class ImagePreviewService
 {
@@ -117,18 +115,6 @@ class ImagePreviewService
         return $thumbPath ?? null;
     }
 
-    /**
-     * Rasterize page 1 of a PDF to a JPG using Imagick + Ghostscript.
-     *
-     * We use Imagick directly rather than spatie/pdf-to-image because the library's
-     * v1.x API does not let us (a) set the background color before readImage — PDFs
-     * without an opaque background otherwise flatten to black on JPG export — nor
-     * (b) apply setResolution before the PDF is loaded, so the intended DPI is
-     * silently ignored.
-     *
-     * Returns true on success. Logs a warning and returns false on any failure
-     * so callers can decide to continue without a thumbnail.
-     */
     private function generatePdfThumbnail(string $sourcePath, string $destinationPath): bool
     {
         // PHP-FPM / queue workers under Herd don't inherit Homebrew's PATH,
@@ -137,28 +123,23 @@ class ImagePreviewService
             putenv('PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin');
         }
 
-        $imagick = new Imagick();
-
         try {
+            $imagick = new Imagick();
+
             // setResolution and setBackgroundColor must be set BEFORE readImage so
             // they apply to the Ghostscript render pass.
             $imagick->setResolution(150, 150);
             $imagick->setBackgroundColor(new ImagickPixel('white'));
-            $imagick->readImage($sourcePath.'[0]');
+            $imagick->readImage($sourcePath . '[0]');
             $imagick->setImageBackgroundColor(new ImagickPixel('white'));
             $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
             $imagick->setImageFormat('jpeg');
             $imagick->writeImage($destinationPath);
-        } catch (Throwable $e) {
-            Log::warning('PDF thumbnail generation failed, continuing without thumbnail.', [
-                'source' => $sourcePath,
-                'destination' => $destinationPath,
-                'error' => $e->getMessage(),
-            ]);
+            $imagick->clear();
+        } catch (\ImagickException $e) {
+            \Illuminate\Support\Facades\Log::warning('PDF thumbnail generation failed: ' . $e->getMessage());
 
             return false;
-        } finally {
-            $imagick->clear();
         }
 
         return file_exists($destinationPath);

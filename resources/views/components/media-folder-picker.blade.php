@@ -86,15 +86,15 @@ new class extends Component {
     <x-slot name="footer">
         @php($isDisabled = count($mediaIds) === 0)
         <div class="ml-auto flex gap-2">
-            <x-noerd::secondary-button wire:click="$dispatch('closeTopModal')">
+            <x-noerd::button variant="ghost" wire:click="$dispatch('closeTopModal')">
                 {{ __('Cancel') }}
-            </x-noerd::secondary-button>
+            </x-noerd::button>
 
-            <x-noerd::buttons.primary
+            <x-noerd::button
                 wire:click="confirm"
                 :class="$isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''">
                 {{ __('media_move_to_folder') }}
-            </x-noerd::buttons.primary>
+            </x-noerd::button>
         </div>
     </x-slot>
 </x-noerd::page>

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
@@ -11,7 +12,7 @@ use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
 use Noerd\Traits\ShowFromFilterTrait;
 
-new class extends Component {
+new class () extends Component {
     use NoerdList;
     use ShowFromFilterTrait;
 
@@ -24,6 +25,8 @@ new class extends Component {
     public ?string $selectToken = null;
     public bool $bulkSelectMode = false;
     public array $selectedMediaIds = [];
+
+    #[Url(as: 'folder', except: null)]
     public ?int $currentFolderId = null;
 
     public function mount(): void
@@ -34,54 +37,17 @@ new class extends Component {
         if ($this->listActionMethod === 'selectAction') {
             $this->selectMode = true;
         }
-    }
 
-    protected function getShowFromListFilter(): array
-    {
-        return [
-            'label' => __('media_label_uploaded_from'),
-            'column' => 'show_from',
-            'type' => 'ShowFrom',
-            'options' => $this->getDateFilterOptions(),
-        ];
-    }
+        // Drop an invalid folder id coming from the URL (deleted folder or foreign tenant)
+        if ($this->currentFolderId !== null) {
+            $folderExists = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+                ->whereKey($this->currentFolderId)
+                ->exists();
 
-    protected function getShowUntilListFilter(): array
-    {
-        return [
-            'label' => __('media_label_uploaded_until'),
-            'column' => 'show_until',
-            'type' => 'ShowUntil',
-            'options' => $this->getDateFilterOptions(),
-        ];
-    }
-
-    protected function getExtensionListFilter(): ?array
-    {
-        // Extensions are tenant-scoped automatically via Media's TenantScope.
-        $extensions = Media::query()
-            ->whereNotNull('extension')
-            ->where('extension', '!=', '')
-            ->distinct()
-            ->orderBy('extension')
-            ->pluck('extension')
-            ->toArray();
-
-        if ($extensions === []) {
-            return null;
+            if (! $folderExists) {
+                $this->currentFolderId = null;
+            }
         }
-
-        $options = [null => __('media_all_types')];
-        foreach ($extensions as $extension) {
-            $options[$extension] = '.' . mb_strtolower($extension);
-        }
-
-        return [
-            'label' => __('media_label_type'),
-            'column' => 'extension',
-            'type' => 'Picklist',
-            'options' => $options,
-        ];
     }
 
     public function with(): array
@@ -104,7 +70,9 @@ new class extends Component {
         $rows = (clone $baseQuery)->latest()->limit($this->perPage)->get();
 
         $currentFolder = $this->currentFolderId
-            ? MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($this->currentFolderId)
+            ? MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+                ->with('parent')
+                ->find($this->currentFolderId)
             : null;
 
         $folders = $hasActiveFilters
@@ -113,6 +81,11 @@ new class extends Component {
                 ->where('parent_id', $this->currentFolderId)
                 ->orderBy('name')
                 ->get();
+
+        $parentFolderId = $currentFolder?->parent_id;
+        $parentFolderName = $currentFolder
+            ? ($currentFolder->parent?->name ?? __('media_label_root'))
+            : null;
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
             ->orderBy('name')
@@ -138,6 +111,9 @@ new class extends Component {
             'folders' => $folders,
             'breadcrumb' => $currentFolder?->breadcrumb() ?? [],
             'hasActiveFilters' => $hasActiveFilters,
+            'parentFolderId' => $parentFolderId,
+            'parentFolderName' => $parentFolderName,
+            'hasParentTile' => $currentFolder !== null,
         ];
     }
 
@@ -213,7 +189,7 @@ new class extends Component {
     {
         if (in_array($id, $this->selectedMediaIds, true)) {
             $this->selectedMediaIds = array_values(
-                array_diff($this->selectedMediaIds, [$id])
+                array_diff($this->selectedMediaIds, [$id]),
             );
         } else {
             $this->selectedMediaIds[] = $id;
@@ -259,7 +235,7 @@ new class extends Component {
 
     public function addOrAttachTag(string $tagName): void
     {
-        $name = trim($tagName);
+        $name = mb_trim($tagName);
         if ($name === '' || ! $this->selected) {
             return;
         }
@@ -393,6 +369,54 @@ new class extends Component {
             $this->selected = null;
         }
     }
+
+    protected function getShowFromListFilter(): array
+    {
+        return [
+            'label' => __('media_label_uploaded_from'),
+            'column' => 'show_from',
+            'type' => 'ShowFrom',
+            'options' => $this->getDateFilterOptions(),
+        ];
+    }
+
+    protected function getShowUntilListFilter(): array
+    {
+        return [
+            'label' => __('media_label_uploaded_until'),
+            'column' => 'show_until',
+            'type' => 'ShowUntil',
+            'options' => $this->getDateFilterOptions(),
+        ];
+    }
+
+    protected function getExtensionListFilter(): ?array
+    {
+        // Extensions are tenant-scoped automatically via Media's TenantScope.
+        $extensions = Media::query()
+            ->whereNotNull('extension')
+            ->where('extension', '!=', '')
+            ->distinct()
+            ->orderBy('extension')
+            ->pluck('extension')
+            ->toArray();
+
+        if ($extensions === []) {
+            return null;
+        }
+
+        $options = [null => __('media_all_types')];
+        foreach ($extensions as $extension) {
+            $options[$extension] = '.' . mb_strtolower($extension);
+        }
+
+        return [
+            'label' => __('media_label_type'),
+            'column' => 'extension',
+            'type' => 'Picklist',
+            'options' => $options,
+        ];
+    }
 } ?>
 
 <x-noerd::page :disableModal="$disableModal">
@@ -437,7 +461,7 @@ new class extends Component {
                      x-transition
                      class="mt-2 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700 flex items-start justify-between gap-3">
                     <span x-text="uploadError"></span>
-                    <button type="button" @click="uploadError = ''" class="text-red-700 hover:text-red-900 font-bold">×</button>
+                    <x-noerd::button variant="icon"  icon="x-mark" type="button" @click="uploadError = ''" class="text-red-700!"/>
                 </div>
             </div>
 
@@ -531,11 +555,11 @@ new class extends Component {
                             @disabled(count($selectedMediaIds) === 0)>
                         {{ __('media_move_to_folder') }}
                     </button>
-                    <x-noerd::buttons.delete wire:confirm="{{ __('Really delete selected?') }}"
+                    <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete selected?') }}"
                                              wire:click="deleteSelectedMedia"
                                              :disabled="count($selectedMediaIds) === 0">
                         {{ __('Delete selected') }}
-                    </x-noerd::buttons.delete>
+                    </x-noerd::button>
                 @endif
             </div>
 
@@ -561,6 +585,29 @@ new class extends Component {
 
             {{-- Media Items --}}
             <div class="grid grid-cols-2 md:grid-cols-6 2xl:grid-cols-6 gap-4 p-4">
+                @if($hasParentTile && ! $hasActiveFilters)
+                    @php
+                        $parentDragKey = $parentFolderId === null ? "'root'" : $parentFolderId;
+                        $parentDropArg = $parentFolderId === null ? 'null' : $parentFolderId;
+                        $parentClickArg = $parentFolderId === null ? 'null' : $parentFolderId;
+                    @endphp
+                    <div wire:key="folder-tile-parent"
+                         class="relative w-full aspect-square p-4 border border-b-gray-400 hover:bg-gray-100 transition-colors"
+                         :class="dragOverFolderId === {{ $parentDragKey }} ? 'bg-blue-100 ring-2 ring-blue-400' : ''"
+                         x-on:dragover="if (isMoveDrag($event)) { $event.preventDefault(); dragOverFolderId = {{ $parentDragKey }}; }"
+                         x-on:dragleave="if (dragOverFolderId === {{ $parentDragKey }}) dragOverFolderId = null"
+                         x-on:drop.prevent="dropOn({{ $parentDropArg }})">
+                        <button type="button"
+                                wire:click="openFolder({{ $parentClickArg }})"
+                                class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m15 15-3-3m0 0-3 3m3-3v6"/>
+                            </svg>
+                            <span class="mt-2 text-sm truncate w-full text-center px-2">.. {{ $parentFolderName }}</span>
+                        </button>
+                    </div>
+                @endif
                 @foreach($folders as $folder)
                     <div wire:key="folder-tile-{{ $folder->id }}"
                          class="relative w-full aspect-square p-4 border border-b-gray-400 hover:bg-gray-100 transition-colors"
@@ -754,10 +801,10 @@ new class extends Component {
                                     class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
                                 {{ __('media_move_to_folder') }}
                             </button>
-                            <x-noerd::buttons.delete wire:confirm="{{ __('Really delete?') }}"
+                            <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete?') }}"
                                                      wire:click="deleteMedia({{ $selected->id }})">
                                 {{ __('Delete') }}
-                            </x-noerd::buttons.delete>
+                            </x-noerd::button>
                         </div>
                     @endif
                 </div>
