@@ -19,13 +19,6 @@ class Media extends Model
 
     protected $table = 'medias';
 
-    protected function casts(): array
-    {
-        return [
-            'custom_attributes' => 'array',
-        ];
-    }
-
     public function aiDocument()
     {
         return $this->hasOne(TextDocument::class);
@@ -44,5 +37,12 @@ class Media extends Model
     protected static function newFactory(): MediaFactory
     {
         return MediaFactory::new();
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'custom_attributes' => 'array',
+        ];
     }
 }

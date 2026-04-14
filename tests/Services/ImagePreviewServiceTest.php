@@ -29,7 +29,7 @@ function pdfRenderingAvailable(): bool
     // not whether the Ghostscript delegate is actually reachable. Probe `gs` directly instead.
     $gsVersion = @shell_exec('gs --version 2>/dev/null');
 
-    return ! empty(trim((string) $gsVersion));
+    return ! empty(mb_trim((string) $gsVersion));
 }
 
 function writeRealPdf(string $absolutePath): void
@@ -102,7 +102,7 @@ it('returns null and logs a warning when the PDF cannot be rasterized', function
     expect($thumbPath)->toBeNull();
 
     Log::shouldHaveReceived('warning')
-        ->withArgs(fn (string $message) => str_contains($message, 'PDF thumbnail generation failed'))
+        ->withArgs(fn(string $message) => str_contains($message, 'PDF thumbnail generation failed'))
         ->once();
 });
 

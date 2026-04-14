@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Imagick;
+use ImagickException;
 use ImagickPixel;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -136,7 +137,7 @@ class ImagePreviewService
             $imagick->setImageFormat('jpeg');
             $imagick->writeImage($destinationPath);
             $imagick->clear();
-        } catch (\ImagickException $e) {
+        } catch (ImagickException $e) {
             \Illuminate\Support\Facades\Log::warning('PDF thumbnail generation failed: ' . $e->getMessage());
 
             return false;
