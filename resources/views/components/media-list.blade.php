@@ -524,7 +524,7 @@ new class () extends Component {
                 @if($hasActiveFilters)
                     <button type="button" wire:click="clearAllFilters"
                             class="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap">
-                        {{ __('noerd_clear_filters') }}
+                        {{ __('Clear all filters') }}
                     </button>
                 @endif
             </div>
