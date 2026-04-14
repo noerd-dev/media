@@ -37,7 +37,7 @@ new class extends Component {
 
 <x-noerd::page :disableModal="$disableModal">
     <x-slot:header>
-        <x-noerd::modal-title>{{ __('media_new_folder') }}</x-noerd::modal-title>
+        <x-noerd::modal-title>{{ __('New folder') }}</x-noerd::modal-title>
     </x-slot:header>
 
     <div class="py-6">
@@ -45,7 +45,7 @@ new class extends Component {
             wire:model="name"
             wire:keydown.enter="store"
             type="text"
-            placeholder="{{ __('media_folder_name') }}"
+            placeholder="{{ __('Folder name') }}"
             autofocus
         />
     </div>

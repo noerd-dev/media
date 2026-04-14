@@ -62,7 +62,7 @@ new class extends Component {
 
 <x-noerd::page :disableModal="$disableModal">
     <x-slot:header>
-        <x-noerd::modal-title>{{ __('media_select_target_folder') }}</x-noerd::modal-title>
+        <x-noerd::modal-title>{{ __('Select target folder') }}</x-noerd::modal-title>
     </x-slot:header>
 
     <div class="py-6 space-y-2">
@@ -73,7 +73,7 @@ new class extends Component {
                     'bg-blue-50 border-blue-500' => $selectedFolderId === null,
                     'bg-white border-gray-200 hover:bg-gray-50' => $selectedFolderId !== null,
                 ])>
-            {{ __('media_label_root') }}
+            {{ __('Root') }}
         </button>
 
         @if(count($tree) > 0)
@@ -93,7 +93,7 @@ new class extends Component {
             <x-noerd::button
                 wire:click="confirm"
                 :class="$isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''">
-                {{ __('media_move_to_folder') }}
+                {{ __('Move to folder') }}
             </x-noerd::button>
         </div>
     </x-slot>

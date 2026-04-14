@@ -84,7 +84,7 @@ new class () extends Component {
 
         $parentFolderId = $currentFolder?->parent_id;
         $parentFolderName = $currentFolder
-            ? ($currentFolder->parent?->name ?? __('media_label_root'))
+            ? ($currentFolder->parent?->name ?? __('Root'))
             : null;
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
@@ -373,7 +373,7 @@ new class () extends Component {
     protected function getShowFromListFilter(): array
     {
         return [
-            'label' => __('media_label_uploaded_from'),
+            'label' => __('Uploaded from'),
             'column' => 'show_from',
             'type' => 'ShowFrom',
             'options' => $this->getDateFilterOptions(),
@@ -383,7 +383,7 @@ new class () extends Component {
     protected function getShowUntilListFilter(): array
     {
         return [
-            'label' => __('media_label_uploaded_until'),
+            'label' => __('Uploaded until'),
             'column' => 'show_until',
             'type' => 'ShowUntil',
             'options' => $this->getDateFilterOptions(),
@@ -405,13 +405,13 @@ new class () extends Component {
             return null;
         }
 
-        $options = [null => __('media_all_types')];
+        $options = [null => __('All types')];
         foreach ($extensions as $extension) {
             $options[$extension] = '.' . mb_strtolower($extension);
         }
 
         return [
-            'label' => __('media_label_type'),
+            'label' => __('Type'),
             'column' => 'extension',
             'type' => 'Picklist',
             'options' => $options,
@@ -447,7 +447,7 @@ new class () extends Component {
              }">
             <div class="pt-8"
                  x-data="{ uploadError: '' }"
-                 @@livewire-upload-error="uploadError = @js(__('media_upload_error'))"
+                 @@livewire-upload-error="uploadError = @js(__('Upload failed. The file may be too large for the server's upload limit.'))"
                  @@livewire-upload-start="uploadError = ''"
                  @@livewire-upload-finish="uploadError = ''">
                 <livewire:dropzone
@@ -478,7 +478,7 @@ new class () extends Component {
                                     :class="dragOverFolderId === 'root' ? 'bg-blue-100 ring-2 ring-blue-400 rounded px-1' : ''"
                                 @endif
                                 class="hover:underline {{ $currentFolderId === null ? 'font-semibold' : '' }}">
-                            {{ __('media_label_root') }}
+                            {{ __('Root') }}
                         </button>
                         @foreach($breadcrumb as $crumb)
                             <span class="text-gray-400">/</span>
@@ -535,7 +535,7 @@ new class () extends Component {
                     <button type="button"
                             wire:click="enterBulkSelectMode"
                             class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                        {{ __('media_select') }}
+                        {{ __('Select') }}
                     </button>
                 @else
                     <button type="button"
@@ -544,7 +544,7 @@ new class () extends Component {
                         {{ __('Cancel') }}
                     </button>
                     <span class="text-sm text-gray-600">
-                        {{ __('media_selected_count', ['count' => count($selectedMediaIds)]) }}
+                        {{ __(':count selected', ['count' => count($selectedMediaIds)]) }}
                     </span>
                     <button type="button"
                             wire:click="openMoveModal"
@@ -553,9 +553,9 @@ new class () extends Component {
                                 'opacity-50 cursor-not-allowed' => count($selectedMediaIds) === 0,
                             ])
                             @disabled(count($selectedMediaIds) === 0)>
-                        {{ __('media_move_to_folder') }}
+                        {{ __('Move to folder') }}
                     </button>
-                    <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete selected?') }}"
+                    <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete selected media?') }}"
                                              wire:click="deleteSelectedMedia"
                                              :disabled="count($selectedMediaIds) === 0">
                         {{ __('Delete selected') }}
@@ -625,7 +625,7 @@ new class () extends Component {
                         </button>
                         <button type="button"
                                 wire:click="deleteFolder({{ $folder->id }})"
-                                wire:confirm="{{ __('media_delete_folder_confirm') }}"
+                                wire:confirm="{{ __('Delete folder? Contents will move to the parent folder.') }}"
                                 class="absolute top-2 right-2 z-10 text-red-600 hover:text-red-800 text-xl leading-none"
                                 title="{{ __('Delete') }}">×</button>
                     </div>
@@ -639,7 +639,7 @@ new class () extends Component {
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
-                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ __('media_new_folder') }}</span>
+                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ __('New folder') }}</span>
                         </button>
                     </div>
                 @endunless
@@ -713,12 +713,12 @@ new class () extends Component {
                                target="_blank"
                                rel="noopener"
                                class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                                {{ __('media_open_in_new_tab') }}
+                                {{ __('Open in new tab') }}
                             </a>
                             <a href="{{ $fileUrl }}"
                                download="{{ $selected->name }}"
                                class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                                {{ __('media_download') }}
+                                {{ __('Download') }}
                             </a>
                         </div>
                         <div class="pt-4">{{ $selected->name }}</div>
@@ -799,7 +799,7 @@ new class () extends Component {
                             <button type="button"
                                     wire:click="openMoveModal({{ $selected->id }})"
                                     class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                                {{ __('media_move_to_folder') }}
+                                {{ __('Move to folder') }}
                             </button>
                             <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete?') }}"
                                                      wire:click="deleteMedia({{ $selected->id }})">
