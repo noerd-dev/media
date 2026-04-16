@@ -447,7 +447,7 @@ new class () extends Component {
              }">
             <div class="pt-8"
                  x-data="{ uploadError: '' }"
-                 @@livewire-upload-error="uploadError = @js(__('Upload failed. The file may be too large for the server's upload limit.'))"
+                 @@livewire-upload-error="uploadError = @js(__("Upload failed. The file may be too large for the server's upload limit."))"
                  @@livewire-upload-start="uploadError = ''"
                  @@livewire-upload-finish="uploadError = ''">
                 <livewire:dropzone
