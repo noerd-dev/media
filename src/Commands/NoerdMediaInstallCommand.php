@@ -47,6 +47,11 @@ class NoerdMediaInstallCommand extends Command
         return 'media.dashboard';
     }
 
+    protected function getSnippetTitle(): string
+    {
+        return 'Media';
+    }
+
     protected function getSourceDir(): string
     {
         return dirname(__DIR__, 2) . '/app-contents/media';
