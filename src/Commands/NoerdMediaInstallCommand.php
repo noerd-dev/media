@@ -52,11 +52,6 @@ class NoerdMediaInstallCommand extends Command
         return dirname(__DIR__, 2) . '/app-contents/media';
     }
 
-    protected function getSnippetTitle(): string
-    {
-        return 'Media';
-    }
-
     /**
      * Update filesystems.php configuration to add media disk
      */
