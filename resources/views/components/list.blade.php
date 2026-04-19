@@ -121,7 +121,7 @@ new class () extends Component {
     {
         $this->dispatch(
             event: 'noerdModal',
-            modalComponent: 'media-detail',
+            modalComponent: 'media::media-detail',
             source: $this->getComponentName(),
             arguments: ['modelId' => $modelId, 'relations' => $relations],
         );
@@ -304,7 +304,7 @@ new class () extends Component {
     {
         $this->dispatch(
             event: 'noerdModal',
-            modalComponent: 'media-folder-create',
+            modalComponent: 'media::folder-create',
             source: $this->getComponentName(),
             arguments: ['parentFolderId' => $this->currentFolderId],
         );
@@ -344,7 +344,7 @@ new class () extends Component {
 
         $this->dispatch(
             event: 'noerdModal',
-            modalComponent: 'media-folder-picker',
+            modalComponent: 'media::folder-picker',
             source: $this->getComponentName(),
             arguments: ['mediaIds' => $ids],
         );

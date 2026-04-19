@@ -29,7 +29,7 @@ function makeMedia(int $tenantId, ?int $folderId = null, string $name = 'foo.jpg
 }
 
 it('creates a folder at root via the create-folder modal', function (): void {
-    Livewire::test('media-folder-create', ['parentFolderId' => null])
+    Livewire::test('media::folder-create', ['parentFolderId' => null])
         ->set('name', 'Documents')
         ->call('store')
         ->assertDispatched('mediaFolderCreated')
@@ -48,7 +48,7 @@ it('creates a nested folder under the current folder via the create-folder modal
         'name' => 'Parent',
     ]);
 
-    Livewire::test('media-folder-create', ['parentFolderId' => $parent->id])
+    Livewire::test('media::folder-create', ['parentFolderId' => $parent->id])
         ->set('name', 'Child')
         ->call('store')
         ->assertDispatched('mediaFolderCreated')
@@ -63,7 +63,7 @@ it('creates a nested folder under the current folder via the create-folder modal
 });
 
 it('does not create a folder when the name is empty', function (): void {
-    Livewire::test('media-folder-create', ['parentFolderId' => null])
+    Livewire::test('media::folder-create', ['parentFolderId' => null])
         ->set('name', '')
         ->call('store')
         ->assertHasErrors(['name' => 'required'])
@@ -79,12 +79,12 @@ it('opens the create-folder modal with the current folder as parent', function (
         'name' => 'Parent',
     ]);
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('openFolder', $parent->id)
         ->call('openCreateFolderModal')
         ->assertDispatched(
             'noerdModal',
-            modalComponent: 'media-folder-create',
+            modalComponent: 'media::folder-create',
             arguments: ['parentFolderId' => $parent->id],
         );
 });
@@ -108,7 +108,7 @@ it('shows only files in the current folder when no filters are active', function
     $insideFile = makeMedia($this->user->selected_tenant_id, $folder->id, 'inside.jpg');
 
     // At root: only the root file is visible
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->assertSee('root.jpg')
         ->assertDontSee('inside.jpg')
         // Navigate into the folder: only inside file is visible
@@ -123,7 +123,7 @@ it('shows files from all folders when search is active (global search)', functio
     makeMedia($this->user->selected_tenant_id, $folder->id, 'alphabet.jpg');
 
     // No search: only root file at root
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->assertSee('alpha.jpg')
         ->assertDontSee('alphabet.jpg')
         // With search: both files match regardless of folder
@@ -136,7 +136,7 @@ it('moves a file into a folder via moveMediaToFolder', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Target']);
     $media = makeMedia($this->user->selected_tenant_id);
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('moveMediaToFolder', [$media->id], $folder->id);
 
     expect($media->fresh()->folder_id)->toBe($folder->id);
@@ -148,7 +148,7 @@ it('bulk-moves selected files into a folder', function (): void {
     $b = makeMedia($this->user->selected_tenant_id, null, 'b.jpg');
     $c = makeMedia($this->user->selected_tenant_id, null, 'c.jpg');
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('enterBulkSelectMode')
         ->call('toggleMediaSelection', $a->id)
         ->call('toggleMediaSelection', $b->id)
@@ -165,7 +165,7 @@ it('cascades children folders and files to parent on folder delete', function ()
     $leaf = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => $middle->id, 'name' => 'Leaf']);
     $file = makeMedia($this->user->selected_tenant_id, $middle->id);
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('deleteFolder', $middle->id);
 
     expect(MediaFolder::find($middle->id))->toBeNull()
@@ -190,7 +190,7 @@ it('moves a file out of a folder back to root', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Holder']);
     $media = makeMedia($this->user->selected_tenant_id, $folder->id);
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('moveMediaToFolder', [$media->id], null);
 
     expect($media->fresh()->folder_id)->toBeNull();
@@ -213,7 +213,7 @@ it('uploads files into the current folder', function (): void {
         'path' => $tmpFile,
     ];
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->call('openFolder', $folder->id)
         ->set('files', [$filePayload])
         ->call('store');
@@ -234,7 +234,7 @@ it('uploads files at root with null folder_id when no folder selected', function
         'path' => $tmpFile,
     ];
 
-    Livewire::test('media-list')
+    Livewire::test('media::list')
         ->set('files', [$filePayload])
         ->call('store');
 
@@ -246,7 +246,7 @@ it('uploads files at root with null folder_id when no folder selected', function
 it('hides folder list when filters are active', function (): void {
     MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Visible']);
 
-    $component = Livewire::test('media-list');
+    $component = Livewire::test('media::list');
     expect($component->viewData('folders'))->toHaveCount(1);
 
     $component->set('search', 'anything');
