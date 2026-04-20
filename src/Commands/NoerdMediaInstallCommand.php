@@ -54,7 +54,7 @@ class NoerdMediaInstallCommand extends Command
 
     protected function getSourceDir(): string
     {
-        return dirname(__DIR__, 2) . '/app-contents/media';
+        return dirname(__DIR__, 2) . '/app-configs/media';
     }
 
     /**
