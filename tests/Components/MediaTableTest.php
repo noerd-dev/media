@@ -30,7 +30,7 @@ it('stores uploaded files via service when calling store()', function (): void {
 
     $before = Media::count();
 
-    Livewire::test('media::list')
+    Livewire::test('media::media-list')
         ->set('files', [$filePayload])
         ->call('store');
 
@@ -52,7 +52,7 @@ it('can add, attach and detach tags for selected media', function (): void {
         'size' => 99,
     ]);
 
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->call('selectMedia', $media->id)
         ->call('addOrAttachTag', 'TestTag');
 
@@ -100,7 +100,7 @@ it('filters media by multiple tags (AND)', function (): void {
     ]);
     $m3->tags()->sync([$tagA->id, $tagB->id]);
 
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->set('filterTagIds', [$tagA->id, $tagB->id]);
 
     $rows = $component->viewData('listConfig')['rows'];
@@ -120,14 +120,14 @@ it('deletes media and removes file from disk', function (): void {
         'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1,
     ]);
 
-    Livewire::test('media::list')->call('deleteMedia', $media->id);
+    Livewire::test('media::media-list')->call('deleteMedia', $media->id);
 
     expect(Media::find($media->id))->toBeNull();
     expect(Storage::disk('media')->exists($path))->toBeFalse();
 });
 
 it('toggles bulk select mode and resets selection on exit', function (): void {
-    Livewire::test('media::list')
+    Livewire::test('media::media-list')
         ->assertSet('bulkSelectMode', false)
         ->assertSet('selectedMediaIds', [])
         ->call('enterBulkSelectMode')
@@ -164,7 +164,7 @@ it('deletes multiple selected media items and removes their files', function ():
 
     $toDelete = [$items[0]->id, $items[2]->id];
 
-    Livewire::test('media::list')
+    Livewire::test('media::media-list')
         ->call('enterBulkSelectMode')
         ->set('selectedMediaIds', $toDelete)
         ->call('deleteSelectedMedia')
@@ -201,7 +201,7 @@ it('clears the detail panel when bulk-deleting includes the currently selected m
         ]);
     });
 
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->call('selectMedia', $items[0]->id)
         ->call('enterBulkSelectMode')
         ->call('toggleMediaSelection', $items[0]->id)
@@ -230,7 +230,7 @@ it('searches media by name', function (): void {
         'extension' => 'jpg', 'path' => $tenantId . '/c.jpg', 'disk' => 'media', 'size' => 1,
     ]);
 
-    $component = Livewire::test('media::list')->set('search', 'invoice');
+    $component = Livewire::test('media::media-list')->set('search', 'invoice');
     $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
 
     expect($ids)->toContain($match->id);
@@ -249,7 +249,7 @@ it('filters media by extension via the listFilters picklist', function (): void 
         'extension' => 'pdf', 'path' => $tenantId . '/b.pdf', 'disk' => 'media', 'size' => 1,
     ]);
 
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->set('listFilters.extension', 'pdf');
 
     $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
@@ -282,7 +282,7 @@ it('filters media by upload date range using show_from and show_until', function
     $future->created_at = now()->addDays(2);
     $future->save();
 
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->set('listFilters.show_from', 'this_week')
         ->set('listFilters.show_until', now()->addDay()->toDateString());
 
@@ -303,7 +303,7 @@ it('exposes an extension filter with the distinct extensions of the current tena
         ]);
     }
 
-    $filters = Livewire::test('media::list')->instance()->tableFilters;
+    $filters = Livewire::test('media::media-list')->instance()->tableFilters;
     $extensionFilter = collect($filters)->firstWhere('column', 'extension');
 
     expect($extensionFilter)->not->toBeNull();
@@ -313,13 +313,13 @@ it('exposes an extension filter with the distinct extensions of the current tena
 });
 
 it('omits the extension filter entirely when no media exists', function (): void {
-    $filters = Livewire::test('media::list')->instance()->tableFilters;
+    $filters = Livewire::test('media::media-list')->instance()->tableFilters;
 
     expect(collect($filters)->firstWhere('column', 'extension'))->toBeNull();
 });
 
 it('clears search, tag filters and listFilters via clearAllFilters', function (): void {
-    $component = Livewire::test('media::list')
+    $component = Livewire::test('media::media-list')
         ->set('search', 'foo')
         ->set('filterTagIds', [1, 2])
         ->set('listFilters.extension', 'pdf')
@@ -347,7 +347,7 @@ it('does not delete media from other tenants even if id is in selection', functi
         'type' => 'image', 'name' => 'foreign.jpg', 'extension' => 'jpg', 'path' => $foreignPath, 'disk' => 'media', 'size' => 1,
     ]);
 
-    Livewire::test('media::list')
+    Livewire::test('media::media-list')
         ->call('enterBulkSelectMode')
         ->set('selectedMediaIds', [$own->id, $foreign->id])
         ->call('deleteSelectedMedia');
