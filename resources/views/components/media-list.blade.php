@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Noerd\Facades\Noerd;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
@@ -119,12 +120,7 @@ new class () extends Component {
 
     public function listAction(mixed $modelId = null, array $relations = []): void
     {
-        $this->dispatch(
-            event: 'noerdModal',
-            modalComponent: 'media::media-detail',
-            source: $this->getComponentName(),
-            arguments: ['modelId' => $modelId, 'relations' => $relations],
-        );
+        Noerd::modal('media::media-detail', ['modelId' => $modelId, 'relations' => $relations]);
     }
 
     public function updatedFiles(): void
@@ -302,12 +298,7 @@ new class () extends Component {
 
     public function openCreateFolderModal(): void
     {
-        $this->dispatch(
-            event: 'noerdModal',
-            modalComponent: 'media::folder-create',
-            source: $this->getComponentName(),
-            arguments: ['parentFolderId' => $this->currentFolderId],
-        );
+        Noerd::modal('media::folder-create', ['parentFolderId' => $this->currentFolderId]);
     }
 
     #[On('mediaFolderCreated')]
@@ -342,12 +333,7 @@ new class () extends Component {
             return;
         }
 
-        $this->dispatch(
-            event: 'noerdModal',
-            modalComponent: 'media::folder-picker',
-            source: $this->getComponentName(),
-            arguments: ['mediaIds' => $ids],
-        );
+        Noerd::modal('media::folder-picker', ['mediaIds' => $ids]);
     }
 
     #[On('mediaFolderPicked')]
