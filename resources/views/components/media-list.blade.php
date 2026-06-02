@@ -22,7 +22,6 @@ new class () extends Component {
     public bool $selectMode = false;
     public ?string $selectContext = null;
     public ?string $selectToken = null;
-    public bool $bulkSelectMode = false;
     public array $selectedMediaIds = [];
 
     #[Url(as: 'folder', except: null)]
@@ -152,31 +151,15 @@ new class () extends Component {
         $this->files = [];
     }
 
-    public function selectMedia(int $id): void
-    {
-        $this->selected = Media::with('tags')->find($id);
-    }
-
     public function deleteMedia(int $id): void
     {
         $media = Media::find($id);
         if ($media) {
             Storage::disk($media->disk)->delete($media->path);
             $media->delete();
+            $this->selectedMediaIds = array_values(array_diff($this->selectedMediaIds, [$id]));
             $this->selected = null;
         }
-    }
-
-    public function enterBulkSelectMode(): void
-    {
-        $this->bulkSelectMode = true;
-        $this->selectedMediaIds = [];
-    }
-
-    public function exitBulkSelectMode(): void
-    {
-        $this->bulkSelectMode = false;
-        $this->selectedMediaIds = [];
     }
 
     public function toggleMediaSelection(int $id): void
@@ -188,6 +171,10 @@ new class () extends Component {
         } else {
             $this->selectedMediaIds[] = $id;
         }
+
+        $this->selected = count($this->selectedMediaIds) === 1
+            ? Media::with('tags')->find($this->selectedMediaIds[0])
+            : null;
     }
 
     public function deleteSelectedMedia(): void
@@ -215,7 +202,8 @@ new class () extends Component {
             $media->delete();
         }
 
-        $this->exitBulkSelectMode();
+        $this->selectedMediaIds = [];
+        $this->selected = null;
     }
 
     public function chooseMedia(int $id): void
@@ -291,6 +279,7 @@ new class () extends Component {
     {
         $this->currentFolderId = $folderId;
         $this->selected = null;
+        $this->selectedMediaIds = [];
         $this->resetPage();
     }
 
@@ -345,9 +334,7 @@ new class () extends Component {
             ->where('tenant_id', Auth::user()->selected_tenant_id)
             ->update(['folder_id' => $folderId]);
 
-        if ($this->bulkSelectMode) {
-            $this->exitBulkSelectMode();
-        }
+        $this->selectedMediaIds = [];
 
         if ($this->selected && in_array($this->selected->id, $mediaIds, true)) {
             $this->selected = null;
@@ -392,7 +379,7 @@ new class () extends Component {
         <x-noerd::modal-title>
             <div class="pb-3 lg:pb-0">{{ __('Media') }}</div>
 
-            <div class="ml-auto mr-2 flex items-center gap-2">
+            <x-slot:actions>
                 <div x-data="{ searchFocused: false }"
                      @keydown.window="let e = $event; if ({{ $searchShortcut['js'] }}) { e.preventDefault(); $refs.searchInput.focus(); }">
                     <div class="relative">
@@ -413,7 +400,7 @@ new class () extends Component {
                              class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $searchShortcut['badge'] }}</kbd>
                     </div>
                 </div>
-            </div>
+            </x-slot:actions>
         </x-noerd::modal-title>
     </x-slot:header>
 
@@ -513,40 +500,6 @@ new class () extends Component {
                 @endif
             </div>
 
-            {{-- Bulk Select Toolbar --}}
-            <div class="px-4 pt-4 flex items-center gap-2">
-                @if(! $bulkSelectMode)
-                    <button type="button"
-                            wire:click="enterBulkSelectMode"
-                            class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                        {{ __('Select') }}
-                    </button>
-                @else
-                    <button type="button"
-                            wire:click="exitBulkSelectMode"
-                            class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
-                        {{ __('Cancel') }}
-                    </button>
-                    <span class="text-sm text-gray-600">
-                        {{ __(':count selected', ['count' => count($selectedMediaIds)]) }}
-                    </span>
-                    <button type="button"
-                            wire:click="openMoveModal"
-                            @class([
-                                'text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50',
-                                'opacity-50 cursor-not-allowed' => count($selectedMediaIds) === 0,
-                            ])
-                            @disabled(count($selectedMediaIds) === 0)>
-                        {{ __('Move to folder') }}
-                    </button>
-                    <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete selected media?') }}"
-                                             wire:click="deleteSelectedMedia"
-                                             :disabled="count($selectedMediaIds) === 0">
-                        {{ __('Delete selected') }}
-                    </x-noerd::button>
-                @endif
-            </div>
-
             {{-- Tag Filter --}}
             @if($tags->isNotEmpty())
                 <div class="p-4 pt-2">
@@ -629,10 +582,10 @@ new class () extends Component {
                 @endunless
                 @foreach($listConfig['rows'] as $row)
                     @php
-                        $isMultiSelected = in_array($row->id, $selectedMediaIds, true);
-                        $clickAction = $bulkSelectMode
-                            ? "toggleMediaSelection({$row->id})"
-                            : ($selectMode ? "chooseMedia({$row->id})" : "selectMedia({$row->id})");
+                        $isSelected = in_array($row->id, $selectedMediaIds, true);
+                        $clickAction = $selectMode
+                            ? "chooseMedia({$row->id})"
+                            : "toggleMediaSelection({$row->id})";
                     @endphp
                     <a wire:click="{{ $clickAction }}"
                        wire:key="media-tile-{{ $row->id }}"
@@ -644,30 +597,12 @@ new class () extends Component {
                        @endif
                        @class([
                            'relative cursor-pointer w-full aspect-square p-4',
-                           'border-2 border-blue-500 ring-2 ring-blue-200' => $bulkSelectMode
-                               ? $isMultiSelected
-                               : $selected?->id === $row->id,
-                           'border border-b-gray-400 hover:bg-gray-100' => $bulkSelectMode
-                               ? ! $isMultiSelected
-                               : $selected?->id !== $row->id,
+                           'border-2 border-blue-500 ring-2 ring-blue-200' => $isSelected,
+                           'border border-b-gray-400 hover:bg-gray-100' => ! $isSelected,
                        ])>
                         <img src="{{ Storage::disk($row->disk)->url($row->thumbnail ?? $row->path) }}"
                              alt="{{ $row->name }}"
                              class="absolute inset-0 w-full h-full p-4 object-cover rounded-lg"/>
-                        @if($bulkSelectMode)
-                            <div @class([
-                                'absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center pointer-events-none',
-                                'bg-blue-500 border-blue-500' => $isMultiSelected,
-                                'bg-white border-gray-400' => ! $isMultiSelected,
-                            ])>
-                                @if($isMultiSelected)
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none"
-                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                @endif
-                            </div>
-                        @endif
                         @if($row->ai_error_count > 0)
                             <div class="absolute bg-red-300 text-red-800 p-2 px-4 rounded-full">
                                 {{ $row->ai_error_count }}
@@ -685,7 +620,23 @@ new class () extends Component {
         @unless($hideDetail)
             <div class="col-span-2 p-4 bg-gray-100">
                 <div class="sticky top-[47px]">
-                    @if($selected)
+                    @if(count($selectedMediaIds) > 1)
+                        <div class="font-semibold mb-4">
+                            {{ __(':count selected', ['count' => count($selectedMediaIds)]) }}
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button type="button"
+                                    wire:click="openMoveModal"
+                                    class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                                {{ __('Move to folder') }}
+                            </button>
+                            <x-noerd::button variant="danger"
+                                             wire:confirm="{{ __('Really delete selected media?') }}"
+                                             wire:click="deleteSelectedMedia">
+                                {{ __('Delete selected') }}
+                            </x-noerd::button>
+                        </div>
+                    @elseif($selected)
                         @php
                             $fileUrl = Storage::disk($selected->disk)->url($selected->path);
                         @endphp

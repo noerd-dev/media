@@ -53,7 +53,7 @@ it('can add, attach and detach tags for selected media', function (): void {
     ]);
 
     $component = Livewire::test('media::media-list')
-        ->call('selectMedia', $media->id)
+        ->call('toggleMediaSelection', $media->id)
         ->call('addOrAttachTag', 'TestTag');
 
     $tag = MediaTag::where('tenant_id', $this->user->selected_tenant_id)->where('name', 'TestTag')->first();
@@ -126,22 +126,42 @@ it('deletes media and removes file from disk', function (): void {
     expect(Storage::disk('media')->exists($path))->toBeFalse();
 });
 
-it('toggles bulk select mode and resets selection on exit', function (): void {
-    Livewire::test('media::media-list')
-        ->assertSet('bulkSelectMode', false)
+it('toggles media ids into and out of the selection array', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $first = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'first.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/first.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+    $second = Media::create([
+        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'second.jpg',
+        'extension' => 'jpg', 'path' => $tenantId . '/second.jpg', 'disk' => 'media', 'size' => 1,
+    ]);
+
+    $component = Livewire::test('media::media-list')
         ->assertSet('selectedMediaIds', [])
-        ->call('enterBulkSelectMode')
-        ->assertSet('bulkSelectMode', true)
+        ->assertSet('selected', null)
+        ->call('toggleMediaSelection', $first->id)
+        ->assertSet('selectedMediaIds', [$first->id]);
+
+    // Single-selection loads the detail model.
+    expect($component->get('selected')?->id)->toBe($first->id);
+
+    // Adding a second id drops the detail model (actions panel takes over).
+    $component->call('toggleMediaSelection', $second->id)
+        ->assertSet('selectedMediaIds', [$first->id, $second->id])
+        ->assertSet('selected', null);
+
+    // Toggling the first id off brings us back to a single-selection detail.
+    $component->call('toggleMediaSelection', $first->id)
+        ->assertSet('selectedMediaIds', [$second->id]);
+
+    expect($component->get('selected')?->id)->toBe($second->id);
+
+    // Toggling the remaining id off empties everything.
+    $component->call('toggleMediaSelection', $second->id)
         ->assertSet('selectedMediaIds', [])
-        ->call('toggleMediaSelection', 42)
-        ->assertSet('selectedMediaIds', [42])
-        ->call('toggleMediaSelection', 99)
-        ->assertSet('selectedMediaIds', [42, 99])
-        ->call('toggleMediaSelection', 42)
-        ->assertSet('selectedMediaIds', [99])
-        ->call('exitBulkSelectMode')
-        ->assertSet('bulkSelectMode', false)
-        ->assertSet('selectedMediaIds', []);
+        ->assertSet('selected', null);
 });
 
 it('deletes multiple selected media items and removes their files', function (): void {
@@ -165,10 +185,8 @@ it('deletes multiple selected media items and removes their files', function ():
     $toDelete = [$items[0]->id, $items[2]->id];
 
     Livewire::test('media::media-list')
-        ->call('enterBulkSelectMode')
         ->set('selectedMediaIds', $toDelete)
         ->call('deleteSelectedMedia')
-        ->assertSet('bulkSelectMode', false)
         ->assertSet('selectedMediaIds', []);
 
     expect(Media::find($items[0]->id))->toBeNull();
@@ -202,8 +220,6 @@ it('clears the detail panel when bulk-deleting includes the currently selected m
     });
 
     $component = Livewire::test('media::media-list')
-        ->call('selectMedia', $items[0]->id)
-        ->call('enterBulkSelectMode')
         ->call('toggleMediaSelection', $items[0]->id)
         ->call('toggleMediaSelection', $items[1]->id)
         ->call('deleteSelectedMedia')
@@ -313,7 +329,6 @@ it('does not delete media from other tenants even if id is in selection', functi
     ]);
 
     Livewire::test('media::media-list')
-        ->call('enterBulkSelectMode')
         ->set('selectedMediaIds', [$own->id, $foreign->id])
         ->call('deleteSelectedMedia');
 

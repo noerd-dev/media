@@ -149,7 +149,6 @@ it('bulk-moves selected files into a folder', function (): void {
     $c = makeMedia($this->user->selected_tenant_id, null, 'c.jpg');
 
     Livewire::test('media::media-list')
-        ->call('enterBulkSelectMode')
         ->call('toggleMediaSelection', $a->id)
         ->call('toggleMediaSelection', $b->id)
         ->call('moveMediaToFolder', [$a->id, $b->id], $folder->id);
