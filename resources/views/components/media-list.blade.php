@@ -597,7 +597,7 @@ new class () extends Component {
                        @endif
                        @class([
                            'relative cursor-pointer w-full aspect-square p-4',
-                           'border-2 border-blue-500 ring-2 ring-blue-200' => $isSelected,
+                           'border-2 border-brand-primary bg-brand-primary/5' => $isSelected,
                            'border border-b-gray-400 hover:bg-gray-100' => ! $isSelected,
                        ])>
                         <img src="{{ Storage::disk($row->disk)->url($row->thumbnail ?? $row->path) }}"
@@ -624,12 +624,12 @@ new class () extends Component {
                         <div class="font-semibold mb-4">
                             {{ __(':count selected', ['count' => count($selectedMediaIds)]) }}
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <button type="button"
-                                    wire:click="openMoveModal"
-                                    class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                        <div class="flex flex-col items-start gap-2">
+                            <x-noerd::button variant="secondary"
+                                             icon="folder"
+                                             wire:click="openMoveModal">
                                 {{ __('Move to folder') }}
-                            </button>
+                            </x-noerd::button>
                             <x-noerd::button variant="danger"
                                              wire:confirm="{{ __('Really delete selected media?') }}"
                                              wire:click="deleteSelectedMedia">
@@ -731,13 +731,14 @@ new class () extends Component {
 
                         {{-- Move + Delete Buttons --}}
                         <div class="pt-4 flex flex-wrap items-center gap-2">
-                            <button type="button"
-                                    wire:click="openMoveModal({{ $selected->id }})"
-                                    class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                            <x-noerd::button variant="secondary"
+                                             icon="folder"
+                                             wire:click="openMoveModal({{ $selected->id }})">
                                 {{ __('Move to folder') }}
-                            </button>
-                            <x-noerd::button variant="danger" wire:confirm="{{ __('Really delete?') }}"
-                                                     wire:click="deleteMedia({{ $selected->id }})">
+                            </x-noerd::button>
+                            <x-noerd::button variant="danger"
+                                             wire:confirm="{{ __('Really delete?') }}"
+                                             wire:click="deleteMedia({{ $selected->id }})">
                                 {{ __('Delete') }}
                             </x-noerd::button>
                         </div>
