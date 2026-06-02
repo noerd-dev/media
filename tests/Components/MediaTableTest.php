@@ -258,41 +258,6 @@ it('filters media by extension via the listFilters picklist', function (): void 
     expect($ids)->not->toContain($jpg->id);
 });
 
-it('filters media by upload date range using show_from and show_until', function (): void {
-    $tenantId = $this->user->selected_tenant_id;
-
-    $old = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'old.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/old.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
-    $old->created_at = now()->subMonths(2);
-    $old->save();
-
-    $recent = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'recent.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/recent.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
-    $recent->created_at = now()->subDays(2);
-    $recent->save();
-
-    $future = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'future.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/future.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
-    $future->created_at = now()->addDays(2);
-    $future->save();
-
-    $component = Livewire::test('media::media-list')
-        ->set('listFilters.show_from', 'this_week')
-        ->set('listFilters.show_until', now()->addDay()->toDateString());
-
-    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
-
-    expect($ids)->toContain($recent->id);
-    expect($ids)->not->toContain($old->id);
-    expect($ids)->not->toContain($future->id);
-});
-
 it('exposes an extension filter with the distinct extensions of the current tenant', function (): void {
     $tenantId = $this->user->selected_tenant_id;
 

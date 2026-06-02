@@ -73,7 +73,7 @@ new class extends Component {
                     'bg-blue-50 border-blue-500' => $selectedFolderId === null,
                     'bg-white border-gray-200 hover:bg-gray-50' => $selectedFolderId !== null,
                 ])>
-            {{ __('Root') }}
+            {{ __('Media Library') }}
         </button>
 
         @if(count($tree) > 0)

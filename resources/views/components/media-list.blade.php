@@ -11,11 +11,9 @@ use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
-use Noerd\Traits\ShowFromFilterTrait;
 
 new class () extends Component {
     use NoerdList;
-    use ShowFromFilterTrait;
 
     public array $files = [];
     public ?Media $selected = null;
@@ -85,7 +83,7 @@ new class () extends Component {
 
         $parentFolderId = $currentFolder?->parent_id;
         $parentFolderName = $currentFolder
-            ? ($currentFolder->parent?->name ?? __('Root'))
+            ? ($currentFolder->parent?->name ?? __('Media Library'))
             : null;
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
@@ -356,26 +354,6 @@ new class () extends Component {
         }
     }
 
-    protected function getShowFromListFilter(): array
-    {
-        return [
-            'label' => __('Uploaded from'),
-            'column' => 'show_from',
-            'type' => 'ShowFrom',
-            'options' => $this->getDateFilterOptions(),
-        ];
-    }
-
-    protected function getShowUntilListFilter(): array
-    {
-        return [
-            'label' => __('Uploaded until'),
-            'column' => 'show_until',
-            'type' => 'ShowUntil',
-            'options' => $this->getDateFilterOptions(),
-        ];
-    }
-
     protected function getExtensionListFilter(): ?array
     {
         // Extensions are tenant-scoped automatically via Media's TenantScope.
@@ -406,6 +384,39 @@ new class () extends Component {
 } ?>
 
 <x-noerd::page :disableModal="$disableModal">
+    @php
+        $searchShortcut = \Noerd\Helpers\KeyboardShortcutHelper::parse('search_focus', 's');
+    @endphp
+
+    <x-slot:header>
+        <x-noerd::modal-title>
+            <div class="pb-3 lg:pb-0">{{ __('Media') }}</div>
+
+            <div class="ml-auto mr-2 flex items-center gap-2">
+                <div x-data="{ searchFocused: false }"
+                     @keydown.window="let e = $event; if ({{ $searchShortcut['js'] }}) { e.preventDefault(); $refs.searchInput.focus(); }">
+                    <div class="relative">
+                        <x-noerd::text-input
+                            x-ref="searchInput"
+                            @focus="searchFocused = true"
+                            @blur="searchFocused = false"
+                            @keydown.escape="$refs.searchInput.blur()"
+                            placeholder="{{ __('Search') }}" wire:model.live.debounce.300ms="search" type="text"
+                            class="min-w-[200px] !mt-0 mb-3 lg:mb-0 h-8 pr-8"/>
+                        <kbd x-show="!searchFocused"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0"
+                             class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $searchShortcut['badge'] }}</kbd>
+                    </div>
+                </div>
+            </div>
+        </x-noerd::modal-title>
+    </x-slot:header>
+
     <div class="grid grid-cols-6 gap-4">
         {{-- Media Grid --}}
         <div class="{{ $hideDetail ? 'col-span-6' : 'col-span-4' }}"
@@ -464,7 +475,7 @@ new class () extends Component {
                                     :class="dragOverFolderId === 'root' ? 'bg-blue-100 ring-2 ring-blue-400 rounded px-1' : ''"
                                 @endif
                                 class="hover:underline {{ $currentFolderId === null ? 'font-semibold' : '' }}">
-                            {{ __('Root') }}
+                            {{ __('Media Library') }}
                         </button>
                         @foreach($breadcrumb as $crumb)
                             <span class="text-gray-400">/</span>
@@ -484,28 +495,15 @@ new class () extends Component {
                 </div>
             @endunless
 
-            {{-- Search + Filters Row --}}
+            {{-- Filters Row --}}
             @php
                 $tableFilters = $this->tableFilters();
             @endphp
             <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
-                <div class="relative">
-                    <x-noerd::text-input
-                        wire:model.live.debounce.300ms="search"
-                        type="text"
-                        placeholder="{{ __('Search') }}"
-                        class="!mt-0 h-[30px] min-w-[200px]"/>
-                </div>
                 @foreach($tableFilters as $tableFilter)
-                    @if(in_array($tableFilter['type'] ?? 'Picklist', ['ShowFrom', 'ShowUntil']))
-                        <x-noerd::filters.date-dropdown
-                            :filter="$tableFilter"
-                            :value="$listFilters[$tableFilter['column']] ?? ''"/>
-                    @else
-                        <x-noerd::filters.picklist
-                            :filter="$tableFilter"
-                            :value="$listFilters[$tableFilter['column']] ?? ''"/>
-                    @endif
+                    <x-noerd::filters.picklist
+                        :filter="$tableFilter"
+                        :value="$listFilters[$tableFilter['column']] ?? ''"/>
                 @endforeach
                 @if($hasActiveFilters)
                     <button type="button" wire:click="clearAllFilters"
