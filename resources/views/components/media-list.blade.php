@@ -647,12 +647,12 @@ new class () extends Component {
                             <a href="{{ $fileUrl }}"
                                target="_blank"
                                rel="noopener"
-                               class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                               class="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-sm border border-gray-300 !bg-brand-secondary px-4 py-1.5 text-sm text-brand-secondary-text shadow-xs transition hover:bg-brand-secondary/80">
                                 {{ __('Open in new tab') }}
                             </a>
                             <a href="{{ $fileUrl }}"
                                download="{{ $selected->name }}"
-                               class="text-sm border px-3 py-1 rounded bg-white hover:bg-gray-50">
+                               class="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-sm border border-gray-300 !bg-brand-secondary px-4 py-1.5 text-sm text-brand-secondary-text shadow-xs transition hover:bg-brand-secondary/80">
                                 {{ __('Download') }}
                             </a>
                         </div>
