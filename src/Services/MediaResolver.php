@@ -18,7 +18,7 @@ class MediaResolver implements MediaResolverContract
             return null;
         }
 
-        return Storage::disk($media->disk)->url($media->thumbnail ?? $media->path);
+        return $media->thumbnailUrl();
     }
 
     public function exists(int $mediaId): bool

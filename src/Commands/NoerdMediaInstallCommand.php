@@ -18,6 +18,7 @@ class NoerdMediaInstallCommand extends Command
     public function handle(): int
     {
         $this->updateFilesystemsConfig();
+        $this->publishMediaConfig();
 
         return $this->runModuleInstallation();
     }
@@ -55,6 +56,25 @@ class NoerdMediaInstallCommand extends Command
     protected function getSourceDir(): string
     {
         return dirname(__DIR__, 2) . '/app-configs/media';
+    }
+
+    /**
+     * Publish the media config to the project root so each project can toggle
+     * media.private. An existing config is left untouched to preserve the
+     * project's choice.
+     */
+    private function publishMediaConfig(): void
+    {
+        $target = base_path('config/media.php');
+
+        if (file_exists($target)) {
+            $this->line('<comment>config/media.php already exists, leaving it untouched.</comment>');
+
+            return;
+        }
+
+        copy(dirname(__DIR__, 2) . '/config/media.php', $target);
+        $this->line('<info>Published config/media.php.</info>');
     }
 
     /**

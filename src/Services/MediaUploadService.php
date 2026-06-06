@@ -75,14 +75,13 @@ class MediaUploadService
     }
 
     /**
-     * Convenience: return the public URL for a stored media path on images disk.
+     * Convenience: return the URL for a stored media file, honoring the
+     * private-media toggle (direct /storage URL in public mode, authenticated
+     * route in private mode).
      */
     public function publicUrl(Media $media): string
     {
-        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
-        $disk = Storage::disk(config('media.disk'));
-
-        return $disk->url($media->path);
+        return $media->url();
     }
 
     private function sanitizeFilename(string $filename): string

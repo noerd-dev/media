@@ -600,7 +600,7 @@ new class () extends Component {
                            'border-2 border-brand-primary bg-brand-primary/5' => $isSelected,
                            'border border-b-gray-400 hover:bg-gray-100' => ! $isSelected,
                        ])>
-                        <img src="{{ Storage::disk($row->disk)->url($row->thumbnail ?? $row->path) }}"
+                        <img src="{{ $row->thumbnailUrl() }}"
                              alt="{{ $row->name }}"
                              class="absolute inset-0 w-full h-full p-4 object-cover rounded-lg"/>
                         @if($row->ai_error_count > 0)
@@ -638,10 +638,10 @@ new class () extends Component {
                         </div>
                     @elseif($selected)
                         @php
-                            $fileUrl = Storage::disk($selected->disk)->url($selected->path);
+                            $fileUrl = $selected->url();
                         @endphp
                         <img alt="{{ $selected->name }}"
-                             src="{{ Storage::disk($selected->disk)->url($selected->thumbnail ?? $selected->path) }}"
+                             src="{{ $selected->thumbnailUrl() }}"
                              class="w-full"/>
                         <div class="pt-4 flex flex-wrap items-center gap-2">
                             <a href="{{ $fileUrl }}"
