@@ -151,6 +151,21 @@ new class () extends Component {
         $this->files = [];
     }
 
+    /**
+     * Build the dropzone validation rules from the configurable allowed extensions.
+     *
+     * @return array<int, string>
+     */
+    public function uploadRules(): array
+    {
+        $extensions = config('media.allowed_extensions', []);
+
+        return [
+            'mimes:' . implode(',', $extensions),
+            'max:' . config('media.max_upload_size'),
+        ];
+    }
+
     public function deleteMedia(int $id): void
     {
         $media = Media::find($id);
@@ -436,7 +451,7 @@ new class () extends Component {
                  @@livewire-upload-finish="uploadError = ''">
                 <livewire:dropzone
                     wire:model.live="files"
-                    :rules="['mimes:png,jpg,jpeg,pdf,txt,webp,svg','max:10420']"
+                    :rules="$this->uploadRules()"
                     :key="'files'"
                     :multiple="true"
                 />

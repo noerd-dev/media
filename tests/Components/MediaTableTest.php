@@ -41,6 +41,24 @@ it('stores uploaded files via service when calling store()', function (): void {
         ->and(Storage::disk('media')->exists($media->path))->toBeTrue();
 });
 
+it('builds the upload dropzone rules from the default media config', function (): void {
+    Livewire::test('media::media-list')
+        ->assertSeeHtml('mimes:png,jpg,jpeg,pdf,txt,webp,svg,avif')
+        ->assertSeeHtml('max:10420');
+});
+
+it('reflects a project override of the upload config in the dropzone rules', function (): void {
+    config([
+        'media.allowed_extensions' => ['png', 'gif'],
+        'media.max_upload_size' => 2048,
+    ]);
+
+    Livewire::test('media::media-list')
+        ->assertSeeHtml('mimes:png,gif')
+        ->assertSeeHtml('max:2048')
+        ->assertDontSeeHtml('mimes:png,jpg,jpeg,pdf,txt,webp,svg,avif');
+});
+
 it('can add, attach and detach tags for selected media', function (): void {
     $media = Media::create([
         'tenant_id' => $this->user->selected_tenant_id,
