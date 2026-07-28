@@ -5,7 +5,7 @@
     "version": "v0.1.5",
 	"license": "proprietary",
 	"require": {
-        "noerd/noerd": "^0.6 || ^0.7",
+        "noerd/noerd": "^0.8",
         "intervention/image": "^3.11",
         "barryvdh/laravel-dompdf": "^3.1",
         "ext-imagick": "*"
