@@ -385,7 +385,7 @@ new class () extends Component {
     }
 } ?>
 
-<x-noerd::page :disableModal="$disableModal">
+<x-noerd::page>
     @php
         $searchShortcut = \Noerd\Helpers\KeyboardShortcutHelper::parse('search_focus', 's');
     @endphp
