@@ -2,7 +2,7 @@
     "name": "noerd/media",
     "description": "Media module for noerd platform",
     "type": "library",
-    "version": "v0.2.0",
+    "version": "v0.2.1",
 	"license": "proprietary",
 	"require": {
         "noerd/noerd": "^0.8",
