@@ -15,6 +15,8 @@ use Noerd\Traits\NoerdList;
 new class () extends Component {
     use NoerdList;
 
+    public $detailComponent = 'media::media-detail';
+
     public array $files = [];
     public ?Media $selected = null;
     public array $filterTagIds = [];
@@ -113,11 +115,6 @@ new class () extends Component {
             'parentFolderName' => $parentFolderName,
             'hasParentTile' => $currentFolder !== null,
         ];
-    }
-
-    public function listAction(mixed $modelId = null, array $relations = []): void
-    {
-        Noerd::modal('media::media-detail', ['modelId' => $modelId, 'relations' => $relations]);
     }
 
     public function updatedFiles(): void
