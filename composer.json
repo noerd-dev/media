@@ -2,10 +2,10 @@
     "name": "noerd/media",
     "description": "Media module for noerd platform",
     "type": "library",
-    "version": "v0.2.2",
+    "version": "v0.2.3",
 	"license": "proprietary",
 	"require": {
-        "noerd/noerd": "^0.8",
+        "noerd/noerd": "^0.9",
         "intervention/image": "^3.11",
         "barryvdh/laravel-dompdf": "^3.1",
         "ext-imagick": "*"
