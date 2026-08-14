@@ -383,36 +383,10 @@ new class () extends Component {
 } ?>
 
 <x-noerd::page>
-    @php
-        $searchShortcut = \Noerd\Helpers\KeyboardShortcutHelper::parse('search_focus', 's');
-    @endphp
-
     <x-slot:header>
+        {{-- Search and the YAML actions are injected generically by modal-title (NoerdList host). --}}
         <x-noerd::modal-title>
             <div class="pb-3 lg:pb-0">{{ __('Media') }}</div>
-
-            <x-slot:actions>
-                <div x-data="{ searchFocused: false }"
-                     @keydown.window="let e = $event; if ({{ $searchShortcut['js'] }}) { e.preventDefault(); $refs.searchInput.focus(); }">
-                    <div class="relative">
-                        <x-noerd::text-input
-                            x-ref="searchInput"
-                            @focus="searchFocused = true"
-                            @blur="searchFocused = false"
-                            @keydown.escape="$refs.searchInput.blur()"
-                            placeholder="{{ __('Search') }}" wire:model.live.debounce.300ms="search" type="text"
-                            class="min-w-[200px] !mt-0 mb-3 lg:mb-0 h-8 pr-8"/>
-                        <kbd x-show="!searchFocused"
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="opacity-0"
-                             x-transition:enter-end="opacity-100"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="opacity-100"
-                             x-transition:leave-end="opacity-0"
-                             class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ $searchShortcut['badge'] }}</kbd>
-                    </div>
-                </div>
-            </x-slot:actions>
         </x-noerd::modal-title>
     </x-slot:header>
 
