@@ -5,7 +5,7 @@ use Noerd\Media\Http\Controllers\MediaFileController;
 
 Route::prefix('media')
     ->as('media.')
-    ->middleware(['auth', 'verified', 'web', 'app-access:media'])
+    ->middleware(['noerd', 'app-access:media'])
     ->group(function (): void {
         Route::livewire('/dashboard', 'media::media-list')->name('dashboard');
     });
@@ -15,7 +15,7 @@ Route::prefix('media')
 // (CRM, accounting, …), so any logged-in tenant user must be able to load them.
 Route::prefix('media')
     ->as('media.')
-    ->middleware(['web', 'auth', 'verified'])
+    ->middleware(['noerd'])
     ->group(function (): void {
         Route::get('/file/{media}', [MediaFileController::class, 'show'])->name('file');
         Route::get('/thumb/{media}', [MediaFileController::class, 'thumbnail'])->name('thumbnail');
