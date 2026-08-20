@@ -52,4 +52,19 @@ return [
     |
     */
     'max_upload_size' => 10420,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ghostscript Binary
+    |--------------------------------------------------------------------------
+    |
+    | Absolute path to the Ghostscript binary used to rasterize the first page
+    | of an uploaded PDF into a JPG thumbnail. Leave empty to auto-detect "gs"
+    | on $PATH (plus the usual Homebrew locations). PDF rasterization is
+    | optional: without Ghostscript — and without the legacy imagick extension —
+    | PDFs are simply stored without a thumbnail and the media library shows a
+    | file-type tile instead.
+    |
+    */
+    'ghostscript_binary' => env('MEDIA_GHOSTSCRIPT_BINARY'),
 ];

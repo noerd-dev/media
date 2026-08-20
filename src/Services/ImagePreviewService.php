@@ -5,9 +5,6 @@ namespace Noerd\Media\Services;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Imagick;
-use ImagickException;
-use ImagickPixel;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Noerd\Media\Models\Media;
@@ -18,6 +15,8 @@ class ImagePreviewService
      * Supported extensions for thumbnail generation.
      */
     public const SUPPORTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'pdf'];
+
+    public function __construct(private readonly PdfThumbnailGenerator $pdfThumbnailGenerator) {}
 
     /**
      * Regenerate thumbnail for an existing media record.
@@ -118,31 +117,6 @@ class ImagePreviewService
 
     private function generatePdfThumbnail(string $sourcePath, string $destinationPath): bool
     {
-        // PHP-FPM / queue workers under Herd don't inherit Homebrew's PATH,
-        // so Imagick's Ghostscript delegate can't be resolved without this.
-        if (app()->environment('local')) {
-            putenv('PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin');
-        }
-
-        try {
-            $imagick = new Imagick();
-
-            // setResolution and setBackgroundColor must be set BEFORE readImage so
-            // they apply to the Ghostscript render pass.
-            $imagick->setResolution(150, 150);
-            $imagick->setBackgroundColor(new ImagickPixel('white'));
-            $imagick->readImage($sourcePath . '[0]');
-            $imagick->setImageBackgroundColor(new ImagickPixel('white'));
-            $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
-            $imagick->setImageFormat('jpeg');
-            $imagick->writeImage($destinationPath);
-            $imagick->clear();
-        } catch (ImagickException $e) {
-            \Illuminate\Support\Facades\Log::warning('PDF thumbnail generation failed: ' . $e->getMessage());
-
-            return false;
-        }
-
-        return file_exists($destinationPath);
+        return $this->pdfThumbnailGenerator->generate($sourcePath, $destinationPath);
     }
 }

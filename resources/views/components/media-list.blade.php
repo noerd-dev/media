@@ -586,9 +586,8 @@ new class () extends Component {
                            'border-2 border-brand-primary bg-brand-primary/5' => $isSelected,
                            'border border-b-gray-400 hover:bg-gray-100' => ! $isSelected,
                        ])>
-                        <img src="{{ $row->thumbnailUrl() }}"
-                             alt="{{ $row->name }}"
-                             class="absolute inset-0 w-full h-full p-4 object-cover rounded-lg"/>
+                        <x-media::media-thumbnail :media="$row"
+                                                  class="absolute inset-0 w-full h-full p-4"/>
                         @if($row->ai_error_count > 0)
                             <div class="absolute bg-red-300 text-red-800 p-2 px-4 rounded-full">
                                 {{ $row->ai_error_count }}
@@ -626,9 +625,7 @@ new class () extends Component {
                         @php
                             $fileUrl = $selected->url();
                         @endphp
-                        <img alt="{{ $selected->name }}"
-                             src="{{ $selected->thumbnailUrl() }}"
-                             class="w-full"/>
+                        <x-media::media-thumbnail :media="$selected" class="w-full"/>
                         <div class="pt-4 flex flex-wrap items-center gap-2">
                             <a href="{{ $fileUrl }}"
                                target="_blank"

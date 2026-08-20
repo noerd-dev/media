@@ -358,3 +358,30 @@ it('does not delete media from other tenants even if id is in selection', functi
     expect(Media::withoutGlobalScopes()->find($foreign->id))->not->toBeNull();
     expect(Storage::disk('media')->exists($foreignPath))->toBeTrue();
 });
+
+it('renders a file-type tile instead of a broken image when a media has no thumbnail', function (): void {
+    Media::factory()->create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'name' => 'contract.pdf',
+        'extension' => 'pdf',
+        'path' => $this->user->selected_tenant_id . '/contract.pdf',
+        'thumbnail' => null,
+    ]);
+
+    Livewire::test('media::media-list')
+        ->assertSeeHtml('>pdf</span>')
+        ->assertDontSeeHtml('src="' . Storage::disk('media')->url($this->user->selected_tenant_id . '/contract.pdf') . '"');
+});
+
+it('renders the generated thumbnail when one exists', function (): void {
+    Media::factory()->create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'name' => 'contract.pdf',
+        'extension' => 'pdf',
+        'path' => $this->user->selected_tenant_id . '/contract.pdf',
+        'thumbnail' => $this->user->selected_tenant_id . '/thumbnails/pdf_abc.jpg',
+    ]);
+
+    Livewire::test('media::media-list')
+        ->assertSeeHtml(Storage::disk('media')->url($this->user->selected_tenant_id . '/thumbnails/pdf_abc.jpg'));
+});

@@ -9,6 +9,7 @@ use function Laravel\Prompts\progress;
 
 use Noerd\Media\Models\Media;
 use Noerd\Media\Services\ImagePreviewService;
+use Noerd\Media\Services\PdfThumbnailGenerator;
 
 class RegenerateThumbnailsCommand extends Command
 {
@@ -21,12 +22,17 @@ class RegenerateThumbnailsCommand extends Command
 
     public function __construct(
         protected ImagePreviewService $imagePreviewService,
+        protected PdfThumbnailGenerator $pdfThumbnailGenerator,
     ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
+        if (! $this->pdfThumbnailGenerator->isAvailable()) {
+            $this->warn('No PDF renderer available — PDFs will be left without a thumbnail. Install Ghostscript (brew install ghostscript) or set MEDIA_GHOSTSCRIPT_BINARY.');
+        }
+
         $disk = config('media.disk');
         $regenerated = 0;
         $skipped = 0;

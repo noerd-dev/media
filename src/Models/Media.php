@@ -16,6 +16,12 @@ class Media extends Model
     use BelongsToTenant;
     use HasFactory;
 
+    /**
+     * Extensions a browser can render directly in an <img> tag. Used as the
+     * fallback when no generated thumbnail exists.
+     */
+    private const INLINE_RENDERABLE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'avif', 'gif'];
+
     protected $guarded = [];
 
     protected $table = 'medias';
@@ -60,6 +66,29 @@ class Media extends Model
         }
 
         return Storage::disk($this->disk)->url($this->thumbnail ?? $this->path);
+    }
+
+    /**
+     * Whether thumbnailUrl() resolves to something an <img> tag can display.
+     * False for files without a generated thumbnail whose original is not an
+     * image itself (e.g. a PDF on an installation without Ghostscript) — those
+     * must be rendered as a file-type tile instead of a broken image.
+     */
+    public function hasRenderableThumbnail(): bool
+    {
+        if (filled($this->thumbnail)) {
+            return true;
+        }
+
+        return in_array($this->normalizedExtension(), self::INLINE_RENDERABLE_EXTENSIONS, true);
+    }
+
+    /**
+     * Lowercased file extension, falling back to the stored path.
+     */
+    public function normalizedExtension(): string
+    {
+        return mb_strtolower((string) ($this->extension ?: pathinfo((string) $this->path, PATHINFO_EXTENSION)));
     }
 
     protected static function newFactory(): MediaFactory
