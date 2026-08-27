@@ -46,7 +46,7 @@ it('redirects guests to login when requesting a private file', function (): void
         'path' => "{$tenant->id}/photo.jpg",
     ]);
 
-    $this->get(route('media.file', $media))->assertRedirect(route('login'));
+    $this->get(route('media.file', $media))->assertRedirect(route('noerd.login'));
 });
 
 it('streams the file to a same-tenant user', function (): void {
