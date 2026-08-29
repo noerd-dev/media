@@ -62,48 +62,28 @@ it('stores media from array payload (dropzone style)', function (): void {
     expect(Storage::disk('media')->exists($media->thumbnail))->toBeTrue();
 });
 
-it('replaces umlauts in filenames during upload', function (): void {
+it('replaces umlauts and special characters in filenames', function (string $input, string $expected, string $entrypoint): void {
     $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
     $service = app(MediaUploadService::class);
-    $fakeImage = UploadedFile::fake()->image('täst_öffnung_über.jpg', 800, 600);
 
-    $media = $service->storeFromUploadedFile($fakeImage);
+    if ($entrypoint === 'uploadedFile') {
+        $media = $service->storeFromUploadedFile(UploadedFile::fake()->image($input, 800, 600));
+    } else {
+        $fakeImage = UploadedFile::fake()->image('source.jpg', 800, 600);
+        $media = $service->storeFromArray([
+            'name' => $input,
+            'extension' => 'jpg',
+            'size' => $fakeImage->getSize(),
+            'path' => $fakeImage->getRealPath(),
+        ]);
+    }
 
-    expect($media->name)->toBe('taest_oeffnung_ueber.jpg')
-        ->and($media->path)->toContain('taest_oeffnung_ueber.jpg');
-});
-
-it('replaces umlauts in filenames from array payload', function (): void {
-    $user = NoerdUser::factory()->withExampleTenant()->create();
-    $this->actingAs($user);
-
-    $service = app(MediaUploadService::class);
-    $fakeImage = UploadedFile::fake()->image('gross_Uebung.jpg', 1200, 800);
-
-    $payload = [
-        'name' => 'groß_Übung.jpg',
-        'extension' => 'jpg',
-        'size' => $fakeImage->getSize(),
-        'path' => $fakeImage->getRealPath(),
-    ];
-
-    $media = $service->storeFromArray($payload);
-
-    expect($media->name)->toBe('gross_Uebung.jpg')
-        ->and($media->path)->toContain('gross_Uebung.jpg');
-});
-
-it('replaces special characters in filenames during upload', function (): void {
-    $user = NoerdUser::factory()->withExampleTenant()->create();
-    $this->actingAs($user);
-
-    $service = app(MediaUploadService::class);
-    $fakeImage = UploadedFile::fake()->image('täst_œuvre_cæsar.jpg', 800, 600);
-
-    $media = $service->storeFromUploadedFile($fakeImage);
-
-    expect($media->name)->toBe('taest_oeuvre_caesar.jpg')
-        ->and($media->path)->toContain('taest_oeuvre_caesar.jpg');
-});
+    expect($media->name)->toBe($expected)
+        ->and($media->path)->toContain($expected);
+})->with([
+    'umlauts via uploaded file' => ['täst_öffnung_über.jpg', 'taest_oeffnung_ueber.jpg', 'uploadedFile'],
+    'umlauts via array payload' => ['groß_Übung.jpg', 'gross_Uebung.jpg', 'array'],
+    'special characters via uploaded file' => ['täst_œuvre_cæsar.jpg', 'taest_oeuvre_caesar.jpg', 'uploadedFile'],
+]);
