@@ -52,4 +52,9 @@ class MediaResolver implements MediaResolverContract
     {
         return true;
     }
+
+    public function pickerComponent(): ?string
+    {
+        return 'media::media-list';
+    }
 }
