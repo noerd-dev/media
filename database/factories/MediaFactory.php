@@ -3,7 +3,9 @@
 namespace Noerd\Media\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Noerd\Helpers\TenantHelper;
 use Noerd\Media\Models\Media;
+use Noerd\Models\Tenant;
 
 class MediaFactory extends Factory
 {
@@ -12,7 +14,9 @@ class MediaFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id' => 1,
+            // The selected tenant when a user acts (matches the BelongsToTenant
+            // stamping), otherwise a fresh tenant so the record is always valid.
+            'tenant_id' => fn(): int => TenantHelper::currentTenantId() ?? Tenant::factory()->create()->id,
             'type' => 'image',
             'name' => $this->faker->word() . '.pdf',
             'extension' => 'pdf',
