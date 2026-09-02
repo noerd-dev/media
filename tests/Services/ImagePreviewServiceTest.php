@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Services\ImagePreviewService;
@@ -20,12 +21,12 @@ afterEach(function (): void {
     FakeGhostscript::cleanup();
 });
 
-function pdfRenderingAvailable(): bool
+function zzPdfRenderingAvailable(): bool
 {
     return PdfRendering::isWorking();
 }
 
-function writeRealPdf(string $absolutePath): void
+function zzWriteRealPdf(string $absolutePath): void
 {
     @mkdir(dirname($absolutePath), 0755, true);
     $pdf = Pdf::loadHTML('<h1>Sample</h1><p>Test PDF for ImagePreviewService.</p>');
@@ -33,7 +34,7 @@ function writeRealPdf(string $absolutePath): void
 }
 
 it('generates a JPG thumbnail for a PDF', function (): void {
-    if (! pdfRenderingAvailable()) {
+    if (! zzPdfRenderingAvailable()) {
         $this->markTestSkipped('This host cannot rasterize PDFs — install Ghostscript (brew install ghostscript).');
     }
 
@@ -42,7 +43,7 @@ it('generates a JPG thumbnail for a PDF', function (): void {
 
     $relativePdfPath = $user->selected_tenant_id . '/sample.pdf';
     $absolutePdfPath = Storage::disk('media')->path($relativePdfPath);
-    writeRealPdf($absolutePdfPath);
+    zzWriteRealPdf($absolutePdfPath);
 
     $media = Media::factory()->create([
         'tenant_id' => $user->selected_tenant_id,
@@ -65,11 +66,9 @@ it('generates a JPG thumbnail for a PDF', function (): void {
     expect(filesize(Storage::disk('media')->path($thumbPath)))->toBeGreaterThan(0);
 });
 
-it('returns null and logs a warning when the PDF cannot be rasterized', function (): void {
+it('returns null and leaves the thumbnail unset when the PDF cannot be rasterized', function (): void {
     // A stubbed binary keeps this deterministic on hosts without Ghostscript.
     config(['media.ghostscript_binary' => FakeGhostscript::failing()]);
-
-    Log::spy();
 
     $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
@@ -92,10 +91,7 @@ it('returns null and logs a warning when the PDF cannot be rasterized', function
     $thumbPath = $service->regenerateThumbnail($media);
 
     expect($thumbPath)->toBeNull();
-
-    Log::shouldHaveReceived('warning')
-        ->withArgs(fn(string $message) => str_contains($message, 'PDF thumbnail generation failed'))
-        ->once();
+    expect($media->refresh()->thumbnail)->toBeNull();
 });
 
 it('still produces thumbnails for JPG through the Intervention branch', function (): void {

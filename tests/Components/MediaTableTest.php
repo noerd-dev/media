@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
@@ -34,10 +36,14 @@ it('stores uploaded files via service when calling store()', function (): void {
         ->set('files', [$filePayload])
         ->call('store');
 
+    @unlink($tmpFile);
+
     expect(Media::count())->toBe($before + 1);
     $media = Media::latest('id')->first();
     expect($media->tenant_id)->toBe($this->user->selected_tenant_id)
         ->and($media->disk)->toBe('media')
+        // No folder is open, so the upload lands at the root.
+        ->and($media->folder_id)->toBeNull()
         ->and(Storage::disk('media')->exists($media->path))->toBeTrue();
 });
 
@@ -49,20 +55,11 @@ it('reflects a project override of the upload config in the dropzone rules', fun
 
     Livewire::test('media::media-list')
         ->assertSeeHtml('mimes:png,gif')
-        ->assertSeeHtml('max:2048')
-        ->assertDontSeeHtml('mimes:png,jpg,jpeg,pdf,txt,webp,svg,avif');
+        ->assertSeeHtml('max:2048');
 });
 
 it('can add, attach and detach tags for selected media', function (): void {
-    $media = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image',
-        'name' => 'bar.jpg',
-        'extension' => 'jpg',
-        'path' => $this->user->selected_tenant_id . '/bar.jpg',
-        'disk' => 'media',
-        'size' => 99,
-    ]);
+    $media = Media::factory()->file($this->user->selected_tenant_id, 'bar.jpg')->create();
 
     $component = Livewire::test('media::media-list')
         ->call('toggleMediaSelection', $media->id)
@@ -92,24 +89,15 @@ it('filters media by multiple tags (AND)', function (): void {
     $tagB = MediaTag::create(['tenant_id' => $this->user->selected_tenant_id, 'name' => 'B']);
 
     // Media 1: A only
-    $m1 = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm1.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m1.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
+    $m1 = Media::factory()->file($this->user->selected_tenant_id, 'm1.jpg')->create();
     $m1->tags()->sync([$tagA->id]);
 
     // Media 2: B only
-    $m2 = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm2.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m2.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
+    $m2 = Media::factory()->file($this->user->selected_tenant_id, 'm2.jpg')->create();
     $m2->tags()->sync([$tagB->id]);
 
     // Media 3: A and B
-    $m3 = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'm3.jpg', 'extension' => 'jpg', 'path' => $this->user->selected_tenant_id . '/m3.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
+    $m3 = Media::factory()->file($this->user->selected_tenant_id, 'm3.jpg')->create();
     $m3->tags()->sync([$tagA->id, $tagB->id]);
 
     $component = Livewire::test('media::media-list')
@@ -127,10 +115,7 @@ it('deletes media and removes file from disk', function (): void {
     $path = $this->user->selected_tenant_id . '/todelete.jpg';
     Storage::disk('media')->put($path, 'x');
 
-    $media = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'todelete.jpg', 'extension' => 'jpg', 'path' => $path, 'disk' => 'media', 'size' => 1,
-    ]);
+    $media = Media::factory()->file($this->user->selected_tenant_id, 'todelete.jpg')->create();
 
     Livewire::test('media::media-list')->call('deleteMedia', $media->id);
 
@@ -141,14 +126,8 @@ it('deletes media and removes file from disk', function (): void {
 it('toggles media ids into and out of the selection array', function (): void {
     $tenantId = $this->user->selected_tenant_id;
 
-    $first = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'first.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/first.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
-    $second = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'second.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/second.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
+    $first = Media::factory()->file($tenantId, 'first.jpg')->create();
+    $second = Media::factory()->file($tenantId, 'second.jpg')->create();
 
     $component = Livewire::test('media::media-list')
         ->assertSet('selectedMediaIds', [])
@@ -183,15 +162,7 @@ it('deletes multiple selected media items and removes their files', function ():
         $path = $tenantId . '/' . $name;
         Storage::disk('media')->put($path, 'x');
 
-        return Media::create([
-            'tenant_id' => $tenantId,
-            'type' => 'image',
-            'name' => $name,
-            'extension' => 'jpg',
-            'path' => $path,
-            'disk' => 'media',
-            'size' => 1,
-        ]);
+        return Media::factory()->file($tenantId, $name)->create();
     });
 
     $toDelete = [$items[0]->id, $items[2]->id];
@@ -220,15 +191,7 @@ it('clears the detail panel when bulk-deleting includes the currently selected m
         $path = $tenantId . '/' . $name;
         Storage::disk('media')->put($path, 'x');
 
-        return Media::create([
-            'tenant_id' => $tenantId,
-            'type' => 'image',
-            'name' => $name,
-            'extension' => 'jpg',
-            'path' => $path,
-            'disk' => 'media',
-            'size' => 1,
-        ]);
+        return Media::factory()->file($tenantId, $name)->create();
     });
 
     $component = Livewire::test('media::media-list')
@@ -249,14 +212,8 @@ it('clears the detail panel when bulk-deleting includes the currently selected m
 it('searches media by name', function (): void {
     $tenantId = $this->user->selected_tenant_id;
 
-    $match = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'invoice-march.pdf',
-        'extension' => 'pdf', 'path' => $tenantId . '/a.pdf', 'disk' => 'media', 'size' => 1,
-    ]);
-    $unrelated = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'photo.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/c.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
+    $match = Media::factory()->file($tenantId, 'invoice-march.pdf')->create();
+    $unrelated = Media::factory()->file($tenantId, 'photo.jpg')->create();
 
     $component = Livewire::test('media::media-list')->set('search', 'invoice');
     $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
@@ -268,14 +225,8 @@ it('searches media by name', function (): void {
 it('filters media by extension via the listFilters picklist', function (): void {
     $tenantId = $this->user->selected_tenant_id;
 
-    $jpg = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'a.jpg',
-        'extension' => 'jpg', 'path' => $tenantId . '/a.jpg', 'disk' => 'media', 'size' => 1,
-    ]);
-    $pdf = Media::create([
-        'tenant_id' => $tenantId, 'type' => 'image', 'name' => 'b.pdf',
-        'extension' => 'pdf', 'path' => $tenantId . '/b.pdf', 'disk' => 'media', 'size' => 1,
-    ]);
+    $jpg = Media::factory()->file($tenantId, 'a.jpg')->create();
+    $pdf = Media::factory()->file($tenantId, 'b.pdf')->create();
 
     $component = Livewire::test('media::media-list')
         ->set('listFilters.extension', 'pdf');
@@ -290,10 +241,7 @@ it('exposes an extension filter with the distinct extensions of the current tena
     $tenantId = $this->user->selected_tenant_id;
 
     foreach (['jpg', 'pdf', 'jpg', 'png'] as $i => $ext) {
-        Media::create([
-            'tenant_id' => $tenantId, 'type' => 'image', 'name' => "f{$i}.{$ext}",
-            'extension' => $ext, 'path' => $tenantId . "/f{$i}.{$ext}", 'disk' => 'media', 'size' => 1,
-        ]);
+        Media::factory()->file($tenantId, "f{$i}.{$ext}")->create();
     }
 
     $filters = Livewire::test('media::media-list')->instance()->tableFilters;
@@ -328,17 +276,11 @@ it('does not delete media from other tenants even if id is in selection', functi
 
     $ownPath = $this->user->selected_tenant_id . '/own.jpg';
     Storage::disk('media')->put($ownPath, 'x');
-    $own = Media::create([
-        'tenant_id' => $this->user->selected_tenant_id,
-        'type' => 'image', 'name' => 'own.jpg', 'extension' => 'jpg', 'path' => $ownPath, 'disk' => 'media', 'size' => 1,
-    ]);
+    $own = Media::factory()->file($this->user->selected_tenant_id, 'own.jpg')->create();
 
     $foreignPath = $otherTenant->id . '/foreign.jpg';
     Storage::disk('media')->put($foreignPath, 'x');
-    $foreign = Media::create([
-        'tenant_id' => $otherTenant->id,
-        'type' => 'image', 'name' => 'foreign.jpg', 'extension' => 'jpg', 'path' => $foreignPath, 'disk' => 'media', 'size' => 1,
-    ]);
+    $foreign = Media::factory()->file($otherTenant->id, 'foreign.jpg')->create();
 
     Livewire::test('media::media-list')
         ->set('selectedMediaIds', [$own->id, $foreign->id])

@@ -21,4 +21,21 @@ class MediaFactory extends Factory
             'size' => $this->faker->numberBetween(1000, 500000),
         ];
     }
+
+    /**
+     * A stored file of one tenant, named as it appears in the media list: the
+     * extension and the storage path are derived from the file name.
+     */
+    public function file(int $tenantId, string $name, ?int $folderId = null): static
+    {
+        return $this->state(fn(): array => [
+            'tenant_id' => $tenantId,
+            'folder_id' => $folderId,
+            'type' => 'image',
+            'name' => $name,
+            'extension' => pathinfo($name, PATHINFO_EXTENSION),
+            'path' => $tenantId . '/' . $name,
+            'size' => 1,
+        ]);
+    }
 }

@@ -1,32 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Models\NoerdUser;
+use Noerd\Models\Tenant;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
+
+function zzMakeMedia(int $tenantId, ?int $folderId = null, string $name = 'foo.jpg'): Media
+{
+    return Media::factory()->file($tenantId, $name, $folderId)->create();
+}
 
 beforeEach(function (): void {
     Storage::fake('media');
     $this->user = NoerdUser::factory()->withExampleTenant()->withSelectedApp('media')->create();
     $this->actingAs($this->user);
 });
-
-function makeMedia(int $tenantId, ?int $folderId = null, string $name = 'foo.jpg'): Media
-{
-    return Media::create([
-        'tenant_id' => $tenantId,
-        'folder_id' => $folderId,
-        'type' => 'image',
-        'name' => $name,
-        'extension' => 'jpg',
-        'path' => $tenantId . '/' . uniqid() . '_' . $name,
-        'disk' => 'media',
-        'size' => 100,
-    ]);
-}
 
 it('creates a folder at root via the create-folder modal', function (): void {
     Livewire::test('media::folder-create', ['parentFolderId' => null])
@@ -104,8 +98,8 @@ it('builds a breadcrumb walking up parents', function (): void {
 
 it('shows only files in the current folder when no filters are active', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Inside']);
-    $rootFile = makeMedia($this->user->selected_tenant_id, null, 'root.jpg');
-    $insideFile = makeMedia($this->user->selected_tenant_id, $folder->id, 'inside.jpg');
+    $rootFile = zzMakeMedia($this->user->selected_tenant_id, null, 'root.jpg');
+    $insideFile = zzMakeMedia($this->user->selected_tenant_id, $folder->id, 'inside.jpg');
 
     // At root: only the root file is visible
     Livewire::test('media::media-list')
@@ -119,8 +113,8 @@ it('shows only files in the current folder when no filters are active', function
 
 it('shows files from all folders when search is active (global search)', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Box']);
-    makeMedia($this->user->selected_tenant_id, null, 'alpha.jpg');
-    makeMedia($this->user->selected_tenant_id, $folder->id, 'alphabet.jpg');
+    zzMakeMedia($this->user->selected_tenant_id, null, 'alpha.jpg');
+    zzMakeMedia($this->user->selected_tenant_id, $folder->id, 'alphabet.jpg');
 
     // No search: only root file at root
     Livewire::test('media::media-list')
@@ -134,7 +128,7 @@ it('shows files from all folders when search is active (global search)', functio
 
 it('moves a file into a folder via moveMediaToFolder', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Target']);
-    $media = makeMedia($this->user->selected_tenant_id);
+    $media = zzMakeMedia($this->user->selected_tenant_id);
 
     Livewire::test('media::media-list')
         ->call('moveMediaToFolder', [$media->id], $folder->id);
@@ -144,9 +138,9 @@ it('moves a file into a folder via moveMediaToFolder', function (): void {
 
 it('bulk-moves selected files into a folder', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Bulk']);
-    $a = makeMedia($this->user->selected_tenant_id, null, 'a.jpg');
-    $b = makeMedia($this->user->selected_tenant_id, null, 'b.jpg');
-    $c = makeMedia($this->user->selected_tenant_id, null, 'c.jpg');
+    $a = zzMakeMedia($this->user->selected_tenant_id, null, 'a.jpg');
+    $b = zzMakeMedia($this->user->selected_tenant_id, null, 'b.jpg');
+    $c = zzMakeMedia($this->user->selected_tenant_id, null, 'c.jpg');
 
     Livewire::test('media::media-list')
         ->call('toggleMediaSelection', $a->id)
@@ -162,7 +156,7 @@ it('cascades children folders and files to parent on folder delete', function ()
     $parent = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Parent']);
     $middle = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => $parent->id, 'name' => 'Middle']);
     $leaf = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => $middle->id, 'name' => 'Leaf']);
-    $file = makeMedia($this->user->selected_tenant_id, $middle->id);
+    $file = zzMakeMedia($this->user->selected_tenant_id, $middle->id);
 
     Livewire::test('media::media-list')
         ->call('deleteFolder', $middle->id);
@@ -173,21 +167,26 @@ it('cascades children folders and files to parent on folder delete', function ()
 });
 
 it('scopes folders by tenant', function (): void {
-    $myTenantId = $this->user->selected_tenant_id;
-    $otherTenantId = $myTenantId + 999;
+    $mine = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Mine',
+    ]);
+    $foreign = MediaFolder::create([
+        'tenant_id' => Tenant::factory()->create()->id,
+        'parent_id' => null,
+        'name' => 'Theirs',
+    ]);
 
-    MediaFolder::create(['tenant_id' => $myTenantId, 'parent_id' => null, 'name' => 'Mine']);
-    MediaFolder::create(['tenant_id' => $otherTenantId, 'parent_id' => null, 'name' => 'Theirs']);
+    // An unfiltered query: only the tenant scope keeps the foreign folder out.
+    $ids = MediaFolder::all()->pluck('id')->all();
 
-    $folders = MediaFolder::where('tenant_id', $myTenantId)->get();
-
-    expect($folders)->toHaveCount(1)
-        ->and($folders->first()->name)->toBe('Mine');
+    expect($ids)->toContain($mine->id)->not->toContain($foreign->id);
 });
 
 it('moves a file out of a folder back to root', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->user->selected_tenant_id, 'parent_id' => null, 'name' => 'Holder']);
-    $media = makeMedia($this->user->selected_tenant_id, $folder->id);
+    $media = zzMakeMedia($this->user->selected_tenant_id, $folder->id);
 
     Livewire::test('media::media-list')
         ->call('moveMediaToFolder', [$media->id], null);
@@ -217,29 +216,11 @@ it('uploads files into the current folder', function (): void {
         ->set('files', [$filePayload])
         ->call('store');
 
+    @unlink($tmpFile);
+
     $media = Media::where('name', 'in-folder.jpg')->first();
     expect($media)->not->toBeNull()
         ->and($media->folder_id)->toBe($folder->id);
-});
-
-it('uploads files at root with null folder_id when no folder selected', function (): void {
-    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
-    file_put_contents($tmpFile, 'fake content');
-
-    $filePayload = [
-        'name' => 'at-root.jpg',
-        'extension' => 'txt',
-        'size' => 12,
-        'path' => $tmpFile,
-    ];
-
-    Livewire::test('media::media-list')
-        ->set('files', [$filePayload])
-        ->call('store');
-
-    $media = Media::where('name', 'at-root.jpg')->first();
-    expect($media)->not->toBeNull()
-        ->and($media->folder_id)->toBeNull();
 });
 
 it('hides folder list when filters are active', function (): void {

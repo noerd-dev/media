@@ -1,8 +1,12 @@
 <?php
 
-use Noerd\Media\Models\Media;
+declare(strict_types=1);
 
-uses(Tests\TestCase::class);
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Noerd\Media\Models\Media;
+use Noerd\Models\Tenant;
+
+uses(Tests\TestCase::class, RefreshDatabase::class);
 
 it('reports a renderable thumbnail once one has been generated', function (): void {
     $media = Media::factory()->make([
@@ -38,4 +42,32 @@ it('normalizes the extension from the column and from the path', function (): vo
 
     expect(Media::factory()->make(['extension' => null, 'path' => '1/file.WEBP'])->normalizedExtension())
         ->toBe('webp');
+});
+
+it('returns a direct /storage url in public mode', function (): void {
+    config(['media.private' => false]);
+
+    $tenant = Tenant::factory()->create();
+    $media = Media::factory()->create([
+        'tenant_id' => $tenant->id,
+        'disk' => 'media',
+        'path' => "{$tenant->id}/photo.jpg",
+    ]);
+
+    expect($media->url())->toContain("/storage/media/{$tenant->id}/photo.jpg");
+});
+
+it('returns the authenticated route in private mode', function (): void {
+    config(['media.private' => true]);
+
+    $tenant = Tenant::factory()->create();
+    $media = Media::factory()->create([
+        'tenant_id' => $tenant->id,
+        'disk' => 'media',
+        'path' => "{$tenant->id}/photo.jpg",
+        'thumbnail' => "{$tenant->id}/thumbnails/thumb_photo.jpg",
+    ]);
+
+    expect($media->url())->toBe(route('media.file', $media))
+        ->and($media->thumbnailUrl())->toBe(route('media.thumbnail', $media));
 });
