@@ -12,7 +12,7 @@ use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
 
-new class () extends Component {
+new class extends Component {
     use NoerdList;
 
     public $detailComponent = 'media::media-detail';
@@ -643,7 +643,7 @@ new class () extends Component {
                         <div class="text-gray-500">{{ $selected->size }}</div>
                         <div class="text-gray-500">
                             <span class="font-semibold">{{ __('Created') }}:</span>
-                            {{ \Carbon\Carbon::parse($selected->created_at)->format('d.m.Y H:i') }}
+                            {{ \Noerd\Helpers\FormatHelper::dateTime($selected->created_at) }}
                         </div>
 
                         @if($selected->ocr_text)
