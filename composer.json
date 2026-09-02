@@ -2,7 +2,7 @@
     "name": "noerd/media",
     "description": "Media module for noerd platform",
     "type": "library",
-    "version": "v0.3.4",
+    "version": "v0.3.5",
     "license": "proprietary",
     "require": {
         "laravel/framework": "^12.0 || ^13.0",
