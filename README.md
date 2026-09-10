@@ -66,6 +66,32 @@ as a fallback when it happens to be installed — PDFs are stored without a thum
 library renders a file-type tile instead. Image thumbnails are unaffected; they run through Intervention
 Image's GD driver.
 
+## App folders
+
+A module can own folders in every tenant's media library — the accounting module, for example,
+registers **Receipt Import** (what its receipt agent reads) and **Receipt Documents** (where the
+receipts end up). Register them from the module's service provider `boot()`:
+
+```php
+app(\Noerd\Media\Services\AppFolderRegistry::class)
+    ->register('accounting.receipt_import', 'ACCOUNTING', 'Receipt Import');
+```
+
+- The folder is created for every tenant holding the app: when the app is assigned to a tenant
+  (`TenantAppAssigned`), when the library is opened, by `noerd:install-media` / `noerd:update-media`
+  for all tenants, and on demand through `AppFolderService::resolve($tenantId, 'accounting.receipt_import')`
+  — a module files a document into the resolved folder by setting the media's `folder_id`
+- The label is an English translation key of the registering module (translated in its `de.json`)
+  and rendered through `MediaFolder::label()`
+- App folders cannot be renamed, moved or deleted (`SystemFolderProtectedException`, no delete
+  button in the library); users may create sub-folders inside them
+- Users who may not use the owning app — not assigned to the tenant, or denied by the app
+  permission, e.g. a noerd-plus grant — do not see the folder, its sub-folders or the files in
+  them. A global scope on `MediaFolder` and `Media` (`AppFolderVisibilityScope`) covers the
+  library, the search, the folder picker and the file routes. Console commands and queue workers
+  are not filtered; a service acting for a tenant lifts the scopes with `withoutGlobalScopes()`
+  and an explicit tenant id
+
 ## Artisan Commands
 
 ```bash

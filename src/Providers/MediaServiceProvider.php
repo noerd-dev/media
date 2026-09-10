@@ -2,13 +2,19 @@
 
 namespace Noerd\Media\Providers;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use Noerd\Events\TenantAppAssigned;
 use Noerd\Media\Commands\MediaRelocateCommand;
 use Noerd\Media\Commands\MediaUpdateCommand;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
+use Noerd\Media\Listeners\EnsureAppFoldersOnAppAssignment;
+use Noerd\Media\Services\AppFolderAccess;
+use Noerd\Media\Services\AppFolderRegistry;
+use Noerd\Media\Services\AppFolderService;
 use Noerd\Media\Services\MediaResolver;
 use Noerd\Media\Services\MediaUsageRegistry;
 
@@ -24,10 +30,20 @@ class MediaServiceProvider extends ServiceProvider
         // Modules register here which files they still need, so a deletion can
         // be refused without this module knowing who asked.
         $this->app->singleton(MediaUsageRegistry::class);
+
+        // Folders an app owns in every tenant's library (a receipt inbox, say):
+        // registered by the module, created per tenant, protected and shown
+        // only to users who may use the app. The two scoped services memoize
+        // per request.
+        $this->app->singleton(AppFolderRegistry::class);
+        $this->app->scoped(AppFolderService::class);
+        $this->app->scoped(AppFolderAccess::class);
     }
 
     public function boot(): void
     {
+        Event::listen(TenantAppAssigned::class, EnsureAppFoldersOnAppAssignment::class);
+
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'media');
         Livewire::addNamespace('media', viewPath: __DIR__ . '/../../resources/views/components');

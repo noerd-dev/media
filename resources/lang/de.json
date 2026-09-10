@@ -56,6 +56,7 @@
     "Type": "Typ",
     "Type to search or press Enter to add": "Tippen zum Suchen oder Enter zum Hinzufügen",
     "Upload failed. The file may be too large for the server's upload limit.": "Upload fehlgeschlagen. Die Datei ist möglicherweise zu groß für das Upload-Limit des Servers.",
+    "The folder \":name\" belongs to an app and cannot be changed or deleted.": "Der Ordner „:name“ gehört zu einer App und kann nicht geändert oder gelöscht werden.",
     "Width": "Breite",
     "of": "von",
     "results": "Ergebnisse",

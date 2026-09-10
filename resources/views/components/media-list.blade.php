@@ -10,6 +10,7 @@ use Noerd\Media\Exceptions\MediaInUseException;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
+use Noerd\Media\Services\AppFolderService;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
 
@@ -42,16 +43,26 @@ new class extends Component {
             $this->selectMode = true;
         }
 
-        // Drop an invalid folder id coming from the URL (deleted folder or foreign tenant)
-        if ($this->currentFolderId !== null) {
-            $folderExists = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
-                ->whereKey($this->currentFolderId)
-                ->exists();
+        // The folders registered by the tenant's apps exist before the tree
+        // is rendered — also for a tenant created without the assignment event.
+        app(AppFolderService::class)->ensureForTenant((int) Auth::user()->selected_tenant_id);
 
-            if (! $folderExists) {
-                $this->currentFolderId = null;
-            }
+        // Drop an invalid folder id coming from the URL (deleted folder, foreign
+        // tenant or an app folder this user may not see)
+        if ($this->currentFolderId !== null && ! $this->folderIsAccessible($this->currentFolderId)) {
+            $this->currentFolderId = null;
         }
+    }
+
+    /**
+     * Whether the user may work in this folder: the tenant scope and the app
+     * folder visibility scope decide — a hidden folder simply does not exist.
+     */
+    private function folderIsAccessible(int $folderId): bool
+    {
+        return MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+            ->whereKey($folderId)
+            ->exists();
     }
 
     public function with(): array
@@ -88,7 +99,7 @@ new class extends Component {
 
         $parentFolderId = $currentFolder?->parent_id;
         $parentFolderName = $currentFolder
-            ? ($currentFolder->parent?->name ?? __('Media Library'))
+            ? ($currentFolder->parent?->label() ?? __('Media Library'))
             : null;
 
         $allTags = MediaTag::where('tenant_id', Auth::user()->selected_tenant_id)
@@ -327,6 +338,12 @@ new class extends Component {
 
     public function openFolder(?int $folderId): void
     {
+        // A client-supplied id: an app folder the user may not see must not
+        // become the upload target through the back door.
+        if ($folderId !== null && ! $this->folderIsAccessible($folderId)) {
+            $folderId = null;
+        }
+
         $this->currentFolderId = $folderId;
         $this->selected = null;
         $this->selectedMediaIds = [];
@@ -347,7 +364,7 @@ new class extends Component {
     public function deleteFolder(int $folderId): void
     {
         $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
-        if (! $folder) {
+        if (! $folder || $folder->isSystem()) {
             return;
         }
 
@@ -376,7 +393,7 @@ new class extends Component {
     #[On('mediaFolderPicked')]
     public function moveMediaToFolder(array $mediaIds, ?int $folderId): void
     {
-        if ($mediaIds === []) {
+        if ($mediaIds === [] || ($folderId !== null && ! $this->folderIsAccessible($folderId))) {
             return;
         }
 
@@ -589,13 +606,15 @@ new class extends Component {
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M19.5 21a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3h-5.379a.75.75 0 0 1-.53-.22L11.47 3.66A2.25 2.25 0 0 0 9.879 3H4.5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15Z"/>
                             </svg>
-                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ $folder->name }}</span>
+                            <span class="mt-2 text-sm truncate w-full text-center px-2">{{ $folder->label() }}</span>
                         </button>
-                        <button type="button"
-                                wire:click="deleteFolder({{ $folder->id }})"
-                                wire:confirm="{{ __('Delete folder? Contents will move to the parent folder.') }}"
-                                class="absolute top-2 right-2 z-10 text-red-600 hover:text-red-800 text-xl leading-none"
-                                title="{{ __('Delete') }}">×</button>
+                        @unless($folder->isSystem())
+                            <button type="button"
+                                    wire:click="deleteFolder({{ $folder->id }})"
+                                    wire:confirm="{{ __('Delete folder? Contents will move to the parent folder.') }}"
+                                    class="absolute top-2 right-2 z-10 text-red-600 hover:text-red-800 text-xl leading-none"
+                                    title="{{ __('Delete') }}">×</button>
+                        @endunless
                     </div>
                 @endforeach
                 @unless($hasActiveFilters)

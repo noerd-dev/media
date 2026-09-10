@@ -45,7 +45,7 @@ new class extends Component {
             foreach ($byParent[$parentId ?? 0] ?? [] as $folder) {
                 $nodes[] = [
                     'id' => $folder->id,
-                    'name' => $folder->name,
+                    'name' => $folder->label(),
                     'children' => $build($folder->id),
                 ];
             }

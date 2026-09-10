@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Database\Factories\MediaFactory;
 use Noerd\Media\Exceptions\MediaInUseException;
+use Noerd\Media\Scopes\AppFolderVisibilityScope;
 use Noerd\Media\Services\MediaUsageRegistry;
 use Noerd\Traits\BelongsToTenant;
 use Noerd\Uki\Models\TextDocument;
@@ -100,6 +101,10 @@ class Media extends Model
      */
     protected static function booted(): void
     {
+        // A file in a folder the user may not see is not visible either — the
+        // global search and the file routes would leak it otherwise.
+        static::addGlobalScope(new AppFolderVisibilityScope());
+
         static::deleting(function (self $media): void {
             $reason = app(MediaUsageRegistry::class)->firstReason($media);
 

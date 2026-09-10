@@ -24,6 +24,12 @@ new class extends Component {
             'name' => 'required|string|max:255',
         ]);
 
+        // The parent id comes from the client: an app folder the user may not
+        // see is no valid parent (the scopes on MediaFolder hide it).
+        if ($this->parentFolderId !== null && ! MediaFolder::whereKey($this->parentFolderId)->exists()) {
+            return;
+        }
+
         MediaFolder::create([
             'tenant_id' => Auth::user()->selected_tenant_id,
             'parent_id' => $this->parentFolderId,

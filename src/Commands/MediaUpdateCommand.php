@@ -10,6 +10,12 @@ class MediaUpdateCommand extends NoerdMediaInstallCommand
 
     public function handle(): int
     {
-        return $this->runModuleUpdate();
+        $result = $this->runModuleUpdate();
+
+        if ($result === self::SUCCESS) {
+            $this->ensureAppFolders();
+        }
+
+        return $result;
     }
 }

@@ -3,6 +3,8 @@
 namespace Noerd\Media\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
+use Noerd\Media\Services\AppFolderService;
 use Noerd\Traits\HasModuleInstallation;
 use Noerd\Traits\RequiresNoerdInstallation;
 
@@ -20,7 +22,31 @@ class NoerdMediaInstallCommand extends Command
         $this->updateFilesystemsConfig();
         $this->publishMediaConfig();
 
-        return $this->runModuleInstallation();
+        $result = $this->runModuleInstallation();
+
+        if ($result === self::SUCCESS) {
+            $this->ensureAppFolders();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Every tenant gets the folders its apps registered (AppFolderRegistry) —
+     * an existing installation catches up here when a module starts
+     * registering one. The update command does not migrate, so an installation
+     * that has not run the media migrations yet is told instead of failing.
+     */
+    protected function ensureAppFolders(): void
+    {
+        if (! Schema::hasTable('media_folders') || ! Schema::hasColumn('media_folders', 'system_key')) {
+            $this->warn('Run php artisan migrate to create the app folders in the media library.');
+
+            return;
+        }
+
+        app(AppFolderService::class)->ensureForAllTenants();
+        $this->line('<info>Ensured the app folders of every tenant in the media library.</info>');
     }
 
     protected function getModuleName(): string
