@@ -6,6 +6,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Noerd\Facades\Noerd;
+use Noerd\Media\Exceptions\MediaInUseException;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
@@ -25,6 +26,9 @@ new class extends Component {
     public ?string $selectContext = null;
     public ?string $selectToken = null;
     public array $selectedMediaIds = [];
+
+    /** Why the last deletion was refused — a module still needs the file. */
+    public ?string $deleteError = null;
 
     #[Url(as: 'folder', except: null)]
     public ?int $currentFolderId = null;
@@ -163,15 +167,34 @@ new class extends Component {
         ];
     }
 
+    /**
+     * The ROW goes first, the file second. A module may veto the deletion
+     * (MediaUsageRegistry) — with the old order the veto arrived after the file
+     * was already gone, leaving a record pointing at nothing.
+     */
     public function deleteMedia(int $id): void
     {
         $media = Media::find($id);
-        if ($media) {
-            Storage::disk($media->disk)->delete($media->path);
-            $media->delete();
-            $this->selectedMediaIds = array_values(array_diff($this->selectedMediaIds, [$id]));
-            $this->selected = null;
+
+        if (! $media) {
+            return;
         }
+
+        $this->deleteError = null;
+        $disk = $media->disk;
+        $path = $media->path;
+
+        try {
+            $media->delete();
+        } catch (MediaInUseException $e) {
+            $this->deleteError = $e->reason;
+
+            return;
+        }
+
+        Storage::disk($disk)->delete($path);
+        $this->selectedMediaIds = array_values(array_diff($this->selectedMediaIds, [$id]));
+        $this->selected = null;
     }
 
     public function toggleMediaSelection(int $id): void
@@ -209,12 +232,27 @@ new class extends Component {
         // is automatically restricted to the current tenant.
         $items = Media::whereIn('id', $this->selectedMediaIds)->get();
 
+        $this->deleteError = null;
+        $kept = [];
+
         foreach ($items as $media) {
-            Storage::disk($media->disk)->delete($media->path);
-            $media->delete();
+            $disk = $media->disk;
+            $path = $media->path;
+
+            try {
+                $media->delete();
+            } catch (MediaInUseException $e) {
+                // One file in use must not abort the rest of the selection.
+                $this->deleteError ??= $e->reason;
+                $kept[] = $media->id;
+
+                continue;
+            }
+
+            Storage::disk($disk)->delete($path);
         }
 
-        $this->selectedMediaIds = [];
+        $this->selectedMediaIds = $kept;
         $this->selected = null;
     }
 
@@ -389,6 +427,13 @@ new class extends Component {
             <div class="pb-3 lg:pb-0">{{ __('Media') }}</div>
         </x-noerd::modal-title>
     </x-slot:header>
+
+    @if ($deleteError)
+        <div class="mb-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+            <span class="flex-1">{{ $deleteError }}</span>
+            <x-noerd::button variant="icon" icon="x-mark" type="button" wire:click="$set('deleteError', null)" class="text-red-700!" />
+        </div>
+    @endif
 
     <div class="grid grid-cols-6 gap-4">
         {{-- Media Grid --}}

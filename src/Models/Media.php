@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Database\Factories\MediaFactory;
+use Noerd\Media\Exceptions\MediaInUseException;
+use Noerd\Media\Services\MediaUsageRegistry;
 use Noerd\Traits\BelongsToTenant;
 use Noerd\Uki\Models\TextDocument;
 
@@ -89,6 +91,22 @@ class Media extends Model
     public function normalizedExtension(): string
     {
         return mb_strtolower((string) ($this->extension ?: pathinfo((string) $this->path, PATHINFO_EXTENSION)));
+    }
+
+    /**
+     * A file another module still needs must not disappear under it. The check
+     * lives on the model rather than in the library screen, so every deletion
+     * path is covered — bulk delete, a future command, tinker.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (self $media): void {
+            $reason = app(MediaUsageRegistry::class)->firstReason($media);
+
+            if ($reason !== null) {
+                throw new MediaInUseException($reason);
+            }
+        });
     }
 
     protected static function newFactory(): MediaFactory

@@ -10,6 +10,7 @@ use Noerd\Media\Commands\MediaUpdateCommand;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
 use Noerd\Media\Services\MediaResolver;
+use Noerd\Media\Services\MediaUsageRegistry;
 
 class MediaServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,10 @@ class MediaServiceProvider extends ServiceProvider
             \Noerd\Contracts\MediaResolverContract::class,
             MediaResolver::class,
         );
+
+        // Modules register here which files they still need, so a deletion can
+        // be refused without this module knowing who asked.
+        $this->app->singleton(MediaUsageRegistry::class);
     }
 
     public function boot(): void
