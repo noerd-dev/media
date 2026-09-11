@@ -232,3 +232,87 @@ it('hides folder list when filters are active', function (): void {
     $component->set('search', 'anything');
     expect($component->viewData('folders'))->toHaveCount(0);
 });
+
+it('creates the directory on disk when a folder is created', function (): void {
+    Livewire::test('media::folder-create', ['parentFolderId' => null])
+        ->set('name', 'Verträge')
+        ->call('store');
+
+    expect(Storage::disk('media')->directories((string) $this->user->selected_tenant_id))
+        ->toContain($this->user->selected_tenant_id . '/Verträge');
+});
+
+it('refuses a folder name that cannot become a directory', function (): void {
+    Livewire::test('media::folder-create', ['parentFolderId' => null])
+        ->set('name', '../')
+        ->call('store')
+        ->assertHasErrors('name')
+        ->assertNotDispatched('mediaFolderCreated');
+
+    expect(MediaFolder::count())->toBe(0);
+});
+
+it('stores an upload inside the directory of the open folder', function (): void {
+    $folder = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Uploads',
+    ]);
+
+    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
+    file_put_contents($tmpFile, 'fake content');
+
+    Livewire::test('media::media-list')
+        ->call('openFolder', $folder->id)
+        ->set('files', [[
+            'name' => 'beleg.txt',
+            'extension' => 'txt',
+            'size' => 12,
+            'path' => $tmpFile,
+        ]])
+        ->call('store');
+
+    @unlink($tmpFile);
+
+    $media = Media::where('name', 'beleg.txt')->first();
+
+    expect($media->path)->toBe($this->user->selected_tenant_id . '/Uploads/beleg.txt');
+    Storage::disk('media')->assertExists($media->path);
+});
+
+it('moves the file on disk when a record is moved to another folder', function (): void {
+    $target = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Ziel',
+    ]);
+
+    $media = zzMakeMedia($this->user->selected_tenant_id, null, 'beleg.jpg');
+    Storage::disk('media')->put($media->path, 'FILE');
+
+    Livewire::test('media::media-list')
+        ->call('moveMediaToFolder', [$media->id], $target->id);
+
+    expect($media->fresh()->path)->toBe($this->user->selected_tenant_id . '/Ziel/beleg.jpg');
+    Storage::disk('media')->assertExists($this->user->selected_tenant_id . '/Ziel/beleg.jpg');
+    Storage::disk('media')->assertMissing($this->user->selected_tenant_id . '/beleg.jpg');
+});
+
+it('lifts files out of a deleted folder and removes its directory', function (): void {
+    $folder = MediaFolder::create([
+        'tenant_id' => $this->user->selected_tenant_id,
+        'parent_id' => null,
+        'name' => 'Weg',
+    ]);
+
+    $media = zzMakeMedia($this->user->selected_tenant_id, $folder->id, 'beleg.jpg');
+    Storage::disk('media')->put($media->path, 'FILE');
+
+    Livewire::test('media::media-list')->call('deleteFolder', $folder->id);
+
+    expect($media->fresh()->path)->toBe($this->user->selected_tenant_id . '/beleg.jpg')
+        ->and($media->fresh()->folder_id)->toBeNull();
+    Storage::disk('media')->assertExists($this->user->selected_tenant_id . '/beleg.jpg');
+    expect(Storage::disk('media')->directories((string) $this->user->selected_tenant_id))
+        ->not->toContain($this->user->selected_tenant_id . '/Weg');
+});

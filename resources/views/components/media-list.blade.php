@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -11,6 +10,7 @@ use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\AppFolderService;
+use Noerd\Media\Services\MediaMover;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Traits\NoerdList;
 
@@ -153,11 +153,9 @@ new class extends Component {
         $mediaUploadService = app()->make(MediaUploadService::class);
 
         foreach ($this->files as $file) {
-            $media = $mediaUploadService->storeFromArray($file);
-
-            if ($this->currentFolderId !== null) {
-                $media->update(['folder_id' => $this->currentFolderId]);
-            }
+            // The folder decides where the bytes go — the disk mirrors the
+            // library, so it cannot be applied after the write.
+            $mediaUploadService->storeFromArray($file, $this->currentFolderId);
         }
 
         $this->files = [];
@@ -192,8 +190,6 @@ new class extends Component {
         }
 
         $this->deleteError = null;
-        $disk = $media->disk;
-        $path = $media->path;
 
         try {
             $media->delete();
@@ -203,7 +199,7 @@ new class extends Component {
             return;
         }
 
-        Storage::disk($disk)->delete($path);
+        app(MediaMover::class)->deleteFile($media);
         $this->selectedMediaIds = array_values(array_diff($this->selectedMediaIds, [$id]));
         $this->selected = null;
     }
@@ -246,10 +242,9 @@ new class extends Component {
         $this->deleteError = null;
         $kept = [];
 
-        foreach ($items as $media) {
-            $disk = $media->disk;
-            $path = $media->path;
+        $mover = app(MediaMover::class);
 
+        foreach ($items as $media) {
             try {
                 $media->delete();
             } catch (MediaInUseException $e) {
@@ -260,7 +255,7 @@ new class extends Component {
                 continue;
             }
 
-            Storage::disk($disk)->delete($path);
+            $mover->deleteFile($media);
         }
 
         $this->selectedMediaIds = $kept;
@@ -368,16 +363,33 @@ new class extends Component {
             return;
         }
 
-        // Cascade: move children folders + files up to the deleted folder's parent
-        MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->where('parent_id', $folder->id)
-            ->update(['parent_id' => $folder->parent_id]);
+        $mover = app(MediaMover::class);
+        $parent = $folder->parent;
+        $tenantId = (int) Auth::user()->selected_tenant_id;
 
-        Media::where('tenant_id', Auth::user()->selected_tenant_id)
+        // Cascade: move children folders + files up to the deleted folder's
+        // parent. Each row is saved individually so the segment is recomputed
+        // and the bytes follow — a mass update() would fire no model events.
+        $children = MediaFolder::where('tenant_id', $tenantId)
+            ->where('parent_id', $folder->id)
+            ->get();
+
+        foreach ($children as $child) {
+            $child->parent_id = $folder->parent_id;
+            $child->save();
+            $mover->relocateFolder($child);
+        }
+
+        $files = Media::where('tenant_id', $tenantId)
             ->where('folder_id', $folder->id)
-            ->update(['folder_id' => $folder->parent_id]);
+            ->get();
+
+        foreach ($files as $media) {
+            $mover->moveToFolder($media, $parent);
+        }
 
         $folder->delete();
+        $mover->removeDirectory($tenantId, $folder);
     }
 
     public function openMoveModal(?int $mediaId = null): void
@@ -397,9 +409,17 @@ new class extends Component {
             return;
         }
 
-        Media::whereIn('id', $mediaIds)
+        $target = $folderId === null ? null : MediaFolder::find($folderId);
+        $mover = app(MediaMover::class);
+
+        $files = Media::whereIn('id', $mediaIds)
             ->where('tenant_id', Auth::user()->selected_tenant_id)
-            ->update(['folder_id' => $folderId]);
+            ->get();
+
+        // One by one through the mover: the bytes move with the record.
+        foreach ($files as $media) {
+            $mover->moveToFolder($media, $target);
+        }
 
         $this->selectedMediaIds = [];
 

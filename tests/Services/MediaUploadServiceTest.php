@@ -64,7 +64,7 @@ it('stores media from array payload (dropzone style)', function (): void {
     expect(Storage::disk('media')->exists($media->thumbnail))->toBeTrue();
 });
 
-it('replaces umlauts and special characters in filenames', function (string $input, string $expected, string $entrypoint): void {
+it('keeps readable file names and strips only what a path must not contain', function (string $input, string $expected, string $entrypoint): void {
     $user = NoerdUser::factory()->withExampleTenant()->create();
     $this->actingAs($user);
 
@@ -85,7 +85,11 @@ it('replaces umlauts and special characters in filenames', function (string $inp
     expect($media->name)->toBe($expected)
         ->and($media->path)->toContain($expected);
 })->with([
-    'umlauts via uploaded file' => ['täst_öffnung_über.jpg', 'taest_oeffnung_ueber.jpg', 'uploadedFile'],
-    'umlauts via array payload' => ['groß_Übung.jpg', 'gross_Uebung.jpg', 'array'],
-    'special characters via uploaded file' => ['täst_œuvre_cæsar.jpg', 'taest_oeuvre_caesar.jpg', 'uploadedFile'],
+    // The disk mirrors the library and people read and fill it, so umlauts stay
+    // — a transliterated name next to a hand-made file would be two names for
+    // one thing. Only what breaks a path is removed.
+    'umlauts via uploaded file' => ['täst_öffnung_über.jpg', 'täst_öffnung_über.jpg', 'uploadedFile'],
+    'umlauts via array payload' => ['groß_Übung.jpg', 'groß_Übung.jpg', 'array'],
+    'directory traversal via array payload' => ['../../etc/passwd.jpg', 'etcpasswd.jpg', 'array'],
+    'wildcards via array payload' => ['re*chnung?.jpg', 'rechnung.jpg', 'array'],
 ]);

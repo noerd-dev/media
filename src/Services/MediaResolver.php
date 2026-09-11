@@ -48,6 +48,15 @@ class MediaResolver implements MediaResolverContract
         return mb_strstr($url, '/storage');
     }
 
+    /**
+     * The id is the stable reference: it survives the file being moved or
+     * renamed in the library, a stored path does not.
+     */
+    public function storeUploadedFileReference(mixed $uploadedFile): int|string|null
+    {
+        return $this->uploadService->storeFromUploadedFile($uploadedFile)->id;
+    }
+
     public function isAvailable(): bool
     {
         return true;

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Noerd\Media\Database\Factories\MediaFolderFactory;
 use Noerd\Media\Exceptions\SystemFolderProtectedException;
 use Noerd\Media\Scopes\AppFolderVisibilityScope;
+use Noerd\Media\Services\MediaPathService;
 use Noerd\Traits\BelongsToTenant;
 
 class MediaFolder extends Model
@@ -77,6 +78,33 @@ class MediaFolder extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new AppFolderVisibilityScope());
+
+        // The disk mirrors the folder tree, so every folder carries a
+        // filesystem-safe, sibling-unique directory name. It is derived here
+        // rather than in the screens, so every creation path is covered.
+        static::saving(function (self $folder): void {
+            // A caller that knows the directory name — the reconciler reading
+            // it off the disk — sets the segment itself and must not be
+            // overruled: the disk is the truth there.
+            if ($folder->isDirty('path_segment') && filled($folder->path_segment)) {
+                return;
+            }
+
+            $needsSegment = blank($folder->path_segment)
+                || $folder->isDirty('name')
+                || $folder->isDirty('parent_id');
+
+            if (! $needsSegment) {
+                return;
+            }
+
+            $folder->path_segment = app(MediaPathService::class)->uniqueSegment(
+                (int) $folder->tenant_id,
+                $folder->parent_id === null ? null : (int) $folder->parent_id,
+                (string) $folder->name,
+                $folder->exists ? (int) $folder->getKey() : null,
+            );
+        });
 
         static::deleting(function (self $folder): void {
             if ($folder->isSystem()) {

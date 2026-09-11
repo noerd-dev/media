@@ -60,7 +60,7 @@ it('generates a JPG thumbnail for a PDF', function (): void {
     expect($thumbPath)
         ->not->toBeNull()
         ->toEndWith('.jpg')
-        ->toStartWith($user->selected_tenant_id . '/thumbnails/pdf_');
+        ->toStartWith($user->selected_tenant_id . '/.thumbnails/pdf_');
 
     expect(Storage::disk('media')->exists($thumbPath))->toBeTrue();
     expect(filesize(Storage::disk('media')->path($thumbPath)))->toBeGreaterThan(0);
@@ -121,7 +121,7 @@ it('still produces thumbnails for JPG through the Intervention branch', function
     expect($thumbPath)
         ->not->toBeNull()
         ->toEndWith('.jpg')
-        ->toStartWith($user->selected_tenant_id . '/thumbnails/thumb_');
+        ->toStartWith($user->selected_tenant_id . '/.thumbnails/thumb_');
 
     expect(Storage::disk('media')->exists($thumbPath))->toBeTrue();
 });

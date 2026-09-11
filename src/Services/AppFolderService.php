@@ -21,7 +21,11 @@ class AppFolderService
     /** @var array<int, true> */
     private array $ensured = [];
 
-    public function __construct(private readonly AppFolderRegistry $registry) {}
+    public function __construct(
+        private readonly AppFolderRegistry $registry,
+        private readonly MediaPathService $paths,
+        private readonly MediaMover $mover,
+    ) {}
 
     /**
      * Create the missing folders of every app the tenant holds. Idempotent and
@@ -112,22 +116,42 @@ class AppFolderService
 
         if ($existing) {
             // A module may rename its label between versions; the folder
-            // follows quietly — the rename guard is meant for users.
-            if ($existing->name !== $definition['label'] || $existing->app_name !== $definition['app']) {
-                $existing->forceFill(['name' => $definition['label'], 'app_name' => $definition['app']])->saveQuietly();
+            // follows quietly — the rename guard is meant for users. The
+            // directory on disk follows too, since it mirrors the library.
+            $renamed = $existing->name !== $definition['label'];
+
+            if ($renamed || $existing->app_name !== $definition['app'] || blank($existing->path_segment)) {
+                $existing->forceFill([
+                    'name' => $definition['label'],
+                    'app_name' => $definition['app'],
+                    'path_segment' => $this->paths->uniqueSegment(
+                        $tenantId,
+                        null,
+                        $definition['label'],
+                        (int) $existing->getKey(),
+                    ),
+                ])->saveQuietly();
+
+                if ($renamed) {
+                    $this->mover->relocateFolder($existing);
+                }
             }
 
             return $existing;
         }
 
         try {
-            return MediaFolder::withoutGlobalScopes()->create([
+            $folder = MediaFolder::withoutGlobalScopes()->create([
                 'tenant_id' => $tenantId,
                 'parent_id' => null,
                 'name' => $definition['label'],
                 'app_name' => $definition['app'],
                 'system_key' => $definition['key'],
             ]);
+
+            $this->mover->ensureDirectory($tenantId, $folder);
+
+            return $folder;
         } catch (UniqueConstraintViolationException) {
             // The scheduler and a user opening the library raced; the row
             // exists now, whoever wrote it.

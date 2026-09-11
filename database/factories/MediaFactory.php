@@ -5,6 +5,8 @@ namespace Noerd\Media\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Noerd\Helpers\TenantHelper;
 use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaFolder;
+use Noerd\Media\Services\MediaPathService;
 use Noerd\Models\Tenant;
 
 class MediaFactory extends Factory
@@ -28,18 +30,26 @@ class MediaFactory extends Factory
 
     /**
      * A stored file of one tenant, named as it appears in the media list: the
-     * extension and the storage path are derived from the file name.
+     * extension and the storage path are derived from the file name and the
+     * folder — the disk mirrors the library, so a fixture in a folder must sit
+     * in that folder's directory.
      */
     public function file(int $tenantId, string $name, ?int $folderId = null): static
     {
-        return $this->state(fn(): array => [
-            'tenant_id' => $tenantId,
-            'folder_id' => $folderId,
-            'type' => 'image',
-            'name' => $name,
-            'extension' => pathinfo($name, PATHINFO_EXTENSION),
-            'path' => $tenantId . '/' . $name,
-            'size' => 1,
-        ]);
+        return $this->state(function () use ($tenantId, $name, $folderId): array {
+            $folder = $folderId === null
+                ? null
+                : MediaFolder::withoutGlobalScopes()->find($folderId);
+
+            return [
+                'tenant_id' => $tenantId,
+                'folder_id' => $folderId,
+                'type' => 'image',
+                'name' => $name,
+                'extension' => pathinfo($name, PATHINFO_EXTENSION),
+                'path' => app(MediaPathService::class)->pathFor($tenantId, $folder, $name),
+                'size' => 1,
+            ];
+        });
     }
 }

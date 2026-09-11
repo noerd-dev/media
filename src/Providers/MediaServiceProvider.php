@@ -8,6 +8,8 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Noerd\Events\TenantAppAssigned;
 use Noerd\Media\Commands\MediaRelocateCommand;
+use Noerd\Media\Commands\MediaRestructureCommand;
+use Noerd\Media\Commands\MediaSyncCommand;
 use Noerd\Media\Commands\MediaUpdateCommand;
 use Noerd\Media\Commands\NoerdMediaInstallCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
@@ -15,6 +17,8 @@ use Noerd\Media\Listeners\EnsureAppFoldersOnAppAssignment;
 use Noerd\Media\Services\AppFolderAccess;
 use Noerd\Media\Services\AppFolderRegistry;
 use Noerd\Media\Services\AppFolderService;
+use Noerd\Media\Services\MediaMover;
+use Noerd\Media\Services\MediaPathService;
 use Noerd\Media\Services\MediaResolver;
 use Noerd\Media\Services\MediaUsageRegistry;
 
@@ -38,6 +42,11 @@ class MediaServiceProvider extends ServiceProvider
         $this->app->singleton(AppFolderRegistry::class);
         $this->app->scoped(AppFolderService::class);
         $this->app->scoped(AppFolderAccess::class);
+
+        // The disk mirrors the folder tree. Both services are request-scoped:
+        // the path service memoizes parent chains, and every mover shares it.
+        $this->app->scoped(MediaPathService::class);
+        $this->app->scoped(MediaMover::class);
     }
 
     public function boot(): void
@@ -67,6 +76,8 @@ class MediaServiceProvider extends ServiceProvider
                 MediaUpdateCommand::class,
                 RegenerateThumbnailsCommand::class,
                 MediaRelocateCommand::class,
+                MediaRestructureCommand::class,
+                MediaSyncCommand::class,
             ]);
         }
     }

@@ -30,7 +30,8 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
   and `partials/folder-tree-node`, the app icon `icons/app`
 - `src/Models/` (`Media`, `MediaFolder`, `MediaTag`), `src/Services/` (`MediaResolver`,
   `MediaUploadService`, `ImagePreviewService`, `PdfThumbnailGenerator`, `MediaUsageRegistry`,
-  `AppFolderRegistry`, `AppFolderService`, `AppFolderAccess`), `src/Scopes/AppFolderVisibilityScope.php`,
+  `AppFolderRegistry`, `AppFolderService`, `AppFolderAccess`, `MediaPathService`, `MediaMover`),
+  `src/Scopes/AppFolderVisibilityScope.php`,
   `src/Listeners/EnsureAppFoldersOnAppAssignment.php`, `src/Exceptions/` (`MediaInUseException`,
   `SystemFolderProtectedException`), `src/Http/Controllers/MediaFileController.php`,
   `src/Commands/`, `src/Providers/MediaServiceProvider.php`
@@ -44,6 +45,9 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 - `php artisan noerd:update-media` — idempotent YAML update, discovered by `noerd:update-all`
 - `php artisan media:regenerate-thumbnails [--missing|--all|--id=]` — rebuild thumbnails
 - `php artisan noerd:media-relocate --to=private|public` — move files when toggling `media.private`
+- `php artisan media:restructure [--tenant=] [--dry-run]` — one-time move from the historic flat
+  layout into the folder-mirroring one
+- `php artisan media:sync [--tenant=] [--prune] [--dry-run]` — reconcile library and disk
 
 ## Working on the module
 
@@ -60,6 +64,10 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
   `tests/Support/CreatesAppFolderFixtures`.
   Project-specific fields go into `custom_attributes`, never into module code or module YAML
 - Upload limits and formats are configuration (`config/media.php`), not code
+- The disk mirrors the library (`{tenant}/{folders}/{name}`): build paths only through
+  `MediaPathService` and move bytes only through `MediaMover` — never `Storage::move()`/`delete()`
+  on a media file, and never a hand-built path. Folder changes are not model events, so every call
+  site calls the mover explicitly
 - When a feature changes: update the YAML in both places, `config/media.php` (module + host copy),
   `resources/lang/de.json`, the tests, `resources/boost/guidelines/core.blade.php` and `README.md`
 - Releasing: bump `"version"` in `composer.json` to the tag in the tagged commit

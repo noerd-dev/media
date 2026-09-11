@@ -21,12 +21,41 @@ this module.
 - `MediaFolder` (table `media_folders`, `BelongsToTenant`) — self-referencing `parent()` /
   `children()` (ordered by name), `medias()`, `breadcrumb()` walks the parent chain; `app_name` +
   `system_key` mark an APP FOLDER (see below): `isSystem()`, `label()` (translated name — render
-  folder names through it, never `$folder->name`)
+  folder names through it, never `$folder->name`). `path_segment` is the folder's DIRECTORY name,
+  derived from `name` by the model's `saving` hook and unique per tenant and parent — never write
+  it by hand and never build a directory name from `name` or `label()` (a label is translated)
 - `MediaTag` (table `media_tags`, NOT tenant scoped) — pivot `media_tag_media`; the tables were
   renamed from `media_labels` by the `rename_media_labels_to_tags` migration
-- Files live on the dedicated `media` disk (`config('media.disk')`, env `MEDIA_DISK`) under
-  `{tenant_id}/{random}_{sanitized name}`; thumbnails under `{tenant_id}/thumbnails/` as
-  `thumb_*.jpg` (images, 500px wide via Intervention Image GD) or `pdf_*.jpg` (PDF page 1)
+### The disk mirrors the library — read this before touching a path
+
+- Files live on the dedicated `media` disk (`config('media.disk')`, env `MEDIA_DISK`) at
+  `{tenant_id}/{folder segments}/{name}`: the storage root carries the SAME tree as the library, so
+  it can be browsed, backed up and filled by hand. `medias.name` IS the basename on disk; a name
+  the target directory already holds is numbered (`beleg-2.pdf`). Thumbnails stay flat in the
+  hidden `{tenant_id}/.thumbnails/` as `thumb_*.jpg` (images, 500px wide via Intervention Image GD)
+  or `pdf_*.jpg` (PDF page 1) — they are generated data, and the reconciler skips dot directories
+- Names stay READABLE: only what breaks a path is stripped (separators, control characters,
+  wildcards, a leading dot) — umlauts and other UTF-8 characters survive, in folder names and file
+  names alike. A transliterated `Vertraege` next to a hand-made `Verträge` directory would be two
+  folders for one thing. A caller that KNOWS the directory name (the reconciler, reading it off the
+  disk) sets `path_segment` itself and the model leaves it alone
+- `MediaPathService` is the ONLY place a path is built (`segmentFor()`, `uniqueSegment()`,
+  `folderPath()`, `pathFor()`, `uniqueFilename()`, `thumbnailDirectory()`); `MediaMover` is the
+  only place bytes move (`moveToFolder()`, `relocate()`, `relocateFolder()`, `deleteFile()`,
+  `ensureDirectory()`, `removeDirectory()`, `pruneEmptyDirectories()`). Never concatenate a path
+  and never call `Storage::move()`/`delete()` on a media file directly
+- The mover is a SERVICE, not a model observer, on purpose: folder changes used to be mass
+  `update()` queries, which fire no model events. Every call site asks the mover explicitly — the
+  library's move, its folder-delete cascade, the upload, and consuming modules (accounting's
+  `ReceiptFolderService::moveToDocuments()`). A module that "moves" a file by writing `folder_id`
+  leaves the bytes behind
+- A consequence for consumers: a file's path is only true until it is moved. NEVER persist a media
+  URL or path in another table — persist the media id and resolve the URL when rendering
+  (`MediaResolverContract::getRelativeUrl()` / `getPreviewUrl()`, or `storeUploadedFileReference()`
+  for an upload)
+- Both commands run headless (explicit `tenant_id`, `withoutGlobalScopes()`) and only touch
+  directories named after an existing tenant: the media disk may hold content the library does not
+  own (CRM print mailings when `crm.storage.disk` points at it)
 
 ### Resolver and usage registry
 - The provider binds `Noerd\Contracts\MediaResolverContract` to `Noerd\Media\Services\MediaResolver`
@@ -121,12 +150,23 @@ this module.
   through `ImagePreviewService::regenerateThumbnail()` (console-safe: uses `$media->tenant_id`)
 - `php artisan noerd:media-relocate {--to=private|public}` — moves the files between the public
   and the private storage root when toggling `media.private`
+- `php artisan media:restructure {--tenant=} {--dry-run}` — the ONE-TIME move of an installation
+  from the historic flat layout into the folder-mirroring one, thumbnails included. Run it after
+  `migrate`, and after the CMS/core migrations that turn stored media URLs into ids — those map the
+  URLs back through the still-flat `medias.path`
+- `php artisan media:sync {--tenant=} {--prune} {--dry-run}` — reconciles library and disk in both
+  directions: unknown directories become folders, unknown files become media (thumbnail included),
+  and media rows without a file are reported. `--prune` deletes those rows THROUGH the model, so
+  the `MediaUsageRegistry` still refuses a file another module needs. A file moved by hand shows up
+  as an import plus an orphaned row — there is no content hash. The module schedules nothing
 
 ### Tests
 - Pest tests in `tests/`, bound to the host `Tests\TestCase` (+ `RefreshDatabase` where data is
   needed); run with `php artisan test --compact app-modules/media/tests`
 - Always `Storage::fake('media')` — never write into the real disk. Users come from
   `NoerdUser::factory()->withExampleTenant()->withSelectedApp('media')`
+- `MediaFactory::file($tenantId, $name, $folderId)` derives the path from the folder, so a fixture
+  really sits where the library says it does — never hand-write a `path` in a fixture
 - PDF rendering is isolated: `tests/Support/FakeGhostscript` writes throwaway `gs` stubs
   (`writingJpeg()`, a failing variant) and points `media.ghostscript_binary` at them;
   `tests/Support/PdfRendering::isWorking()` decides whether a real-renderer integration test skips

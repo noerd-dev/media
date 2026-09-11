@@ -4,22 +4,30 @@ namespace Noerd\Media\Services;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaFolder;
 
 class MediaUploadService
 {
-    public function __construct(private readonly ImagePreviewService $imagePreviewService) {}
+    public function __construct(
+        private readonly ImagePreviewService $imagePreviewService,
+        private readonly MediaPathService $paths,
+    ) {}
 
     /**
      * Store a file described by an array (dropzone-style) into medias and disk, and return the Media model.
      * Expected keys: name, extension, size, path
+     *
+     * The target folder is passed in rather than applied afterwards: the disk
+     * mirrors the library, so the folder decides where the bytes go.
      */
-    public function storeFromArray(array $file): Media
+    public function storeFromArray(array $file, ?int $folderId = null): Media
     {
-        $sanitizedName = $this->sanitizeFilename($file['name']);
-        $randomName = Str::random() . '_' . $sanitizedName;
-        $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
+        $tenantId = (int) Auth::user()->selected_tenant_id;
+        $folder = $this->resolveFolder($folderId);
+
+        $name = $this->paths->uniqueFilename($tenantId, $folder, (string) $file['name']);
+        $destinationPath = $this->paths->pathFor($tenantId, $folder, $name);
 
         $disk = config('media.disk');
         Storage::disk($disk)->put($destinationPath, file_get_contents($file['path']));
@@ -27,10 +35,11 @@ class MediaUploadService
         $previewPath = $this->imagePreviewService->createPreviewForFile($file, $destinationPath);
 
         return Media::create([
-            'tenant_id' => Auth::user()->selected_tenant_id,
+            'tenant_id' => $tenantId,
+            'folder_id' => $folderId,
             'path' => $destinationPath,
             'type' => 'image',
-            'name' => $sanitizedName,
+            'name' => $name,
             'extension' => $file['extension'],
             'size' => $file['size'],
             'disk' => $disk,
@@ -38,15 +47,16 @@ class MediaUploadService
         ]);
     }
 
-    public function storeFromUploadedFile($uploadedFile): Media
+    public function storeFromUploadedFile($uploadedFile, ?int $folderId = null): Media
     {
-        $originalName = $uploadedFile->getClientOriginalName();
-        $sanitizedName = $this->sanitizeFilename($originalName);
+        $tenantId = (int) Auth::user()->selected_tenant_id;
+        $folder = $this->resolveFolder($folderId);
+
         $extension = $uploadedFile->getClientOriginalExtension();
         $size = $uploadedFile->getSize();
 
-        $randomName = Str::random() . '_' . $sanitizedName;
-        $destinationPath = Auth::user()->selected_tenant_id . '/' . $randomName;
+        $name = $this->paths->uniqueFilename($tenantId, $folder, $uploadedFile->getClientOriginalName());
+        $destinationPath = $this->paths->pathFor($tenantId, $folder, $name);
 
         $disk = config('media.disk');
         $stream = fopen($uploadedFile->getRealPath(), 'r');
@@ -56,17 +66,18 @@ class MediaUploadService
         }
 
         $fileMeta = [
-            'name' => $sanitizedName,
+            'name' => $name,
             'extension' => $extension,
             'size' => $size,
         ];
         $previewPath = $this->imagePreviewService->createPreviewForFile($fileMeta, $destinationPath);
 
         return Media::create([
-            'tenant_id' => Auth::user()->selected_tenant_id,
+            'tenant_id' => $tenantId,
+            'folder_id' => $folderId,
             'path' => $destinationPath,
             'type' => 'image',
-            'name' => $sanitizedName,
+            'name' => $name,
             'extension' => $extension,
             'size' => $size,
             'disk' => $disk,
@@ -84,8 +95,14 @@ class MediaUploadService
         return $media->url();
     }
 
-    private function sanitizeFilename(string $filename): string
+    /**
+     * The upload target may be an app folder the acting user cannot see in the
+     * library; resolve it scope-free and let the screen decide accessibility.
+     */
+    private function resolveFolder(?int $folderId): ?MediaFolder
     {
-        return Str::ascii($filename, 'de');
+        return $folderId === null
+            ? null
+            : MediaFolder::withoutGlobalScopes()->find($folderId);
     }
 }
