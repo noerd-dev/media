@@ -555,6 +555,11 @@ new class extends Component {
                 $tableFilters = $this->tableFilters();
             @endphp
             <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
+                {{-- The grid loads more tiles as the user scrolls, so the number of
+                     visible tiles says nothing about how much the folder holds. --}}
+                <span class="text-sm text-gray-600 whitespace-nowrap">
+                    {{ trans_choice(':count file|:count files', $totalCount, ['count' => $totalCount]) }}
+                </span>
                 @foreach($tableFilters as $tableFilter)
                     <x-noerd::filters.picklist
                         :filter="$tableFilter"

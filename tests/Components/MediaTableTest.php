@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
+use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Models\MediaTag;
 use Noerd\Models\NoerdUser;
 use Noerd\Models\Tenant;
@@ -320,4 +321,43 @@ it('renders the generated thumbnail when one exists', function (): void {
 
     Livewire::test('media::media-list')
         ->assertSeeHtml(Storage::disk('media')->url($this->user->selected_tenant_id . '/thumbnails/pdf_abc.jpg'));
+});
+
+it('counts the files of the open folder and renders the count next to the filters', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $folder = MediaFolder::factory()->create(['tenant_id' => $tenantId]);
+    $otherFolder = MediaFolder::factory()->create(['tenant_id' => $tenantId]);
+
+    Media::factory()->file($tenantId, 'a.pdf', $folder->id)->create();
+    Media::factory()->file($tenantId, 'b.pdf', $folder->id)->create();
+    Media::factory()->file($tenantId, 'c.pdf', $otherFolder->id)->create();
+    Media::factory()->file($tenantId, 'root.pdf')->create();
+
+    $component = Livewire::test('media::media-list')->call('openFolder', $folder->id);
+
+    expect($component->viewData('totalCount'))->toBe(2);
+    $component->assertSee(trans_choice(':count file|:count files', 2, ['count' => 2]));
+
+    // The root holds exactly the one file that was created without a folder.
+    $component->call('openFolder', null);
+    expect($component->viewData('totalCount'))->toBe(1);
+});
+
+it('counts the search hits across folders while a filter is active', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+
+    $folder = MediaFolder::factory()->create(['tenant_id' => $tenantId]);
+
+    Media::factory()->file($tenantId, 'invoice-a.pdf', $folder->id)->create();
+    Media::factory()->file($tenantId, 'invoice-b.pdf')->create();
+    Media::factory()->file($tenantId, 'photo.jpg')->create();
+
+    // A search leaves the folder context behind — the count must follow the
+    // rows the grid actually shows, not the open folder.
+    $component = Livewire::test('media::media-list')
+        ->call('openFolder', $folder->id)
+        ->set('search', 'invoice');
+
+    expect($component->viewData('totalCount'))->toBe(2);
 });

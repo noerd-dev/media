@@ -1,4 +1,5 @@
 {
+    ":count file|:count files": ":count Datei|:count Dateien",
     ":count selected": ":count ausgewählt",
     "Active": "Aktiv",
     "Add new tag…": "Neues Tag hinzufügen…",

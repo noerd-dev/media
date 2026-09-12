@@ -31,7 +31,8 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 - `src/Models/` (`Media`, `MediaFolder`, `MediaTag`), `src/Services/` (`MediaResolver`,
   `MediaUploadService`, `ImagePreviewService`, `PdfThumbnailGenerator`, `MediaUsageRegistry`,
   `AppFolderRegistry`, `AppFolderService`, `AppFolderAccess`, `MediaPathService`, `MediaMover`),
-  `src/Scopes/AppFolderVisibilityScope.php`,
+  `src/Scopes/AppFolderVisibilityScope.php`, `src/Support/FileTypeIcon.php` (the icon a file gets
+  when it has no preview),
   `src/Listeners/EnsureAppFoldersOnAppAssignment.php`, `src/Exceptions/` (`MediaInUseException`,
   `SystemFolderProtectedException`), `src/Http/Controllers/MediaFileController.php`,
   `src/Commands/`, `src/Providers/MediaServiceProvider.php`

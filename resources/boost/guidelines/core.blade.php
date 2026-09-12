@@ -17,7 +17,10 @@ this module.
   `thumbnailUrl()` honour `config('media.private')` (direct `/storage/media/…` URL in public mode,
   the authenticated `media.file` / `media.thumbnail` routes in private mode);
   `hasRenderableThumbnail()` says whether an `<img>` can show it — otherwise render a file-type
-  tile, never a broken image
+  tile, never a broken image. The tile is the partial `media-thumbnail`, whose icon and colour come
+  from `Noerd\Media\Support\FileTypeIcon::for($extension)` (a `heroicons::outline.*` name plus the
+  literal Tailwind classes — a PDF is red, a spreadsheet green, the unknown extension grey). Extend
+  that map instead of branching on an extension in a view
 - `MediaFolder` (table `media_folders`, `BelongsToTenant`) — self-referencing `parent()` /
   `children()` (ordered by name), `medias()`, `breadcrumb()` walks the parent chain; `app_name` +
   `system_key` mark an APP FOLDER (see below): `isSystem()`, `label()` (translated name — render
@@ -126,7 +129,10 @@ this module.
   NOT a slim list — it overrides `with()`; opens `media::folder-create` and `media::folder-picker`
   as component modals and listens for `mediaFolderCreated` / `mediaFolderPicked`), `folder-create`,
   `folder-picker`, the Blade partials `media-thumbnail` and `partials/folder-tree-node`, the app
-  icon `icons/app` (`media::icons.app` — the one hand-made icon, returned by `getAppIcon()`)
+  icon `icons/app` (`media::icons.app` — the one hand-made icon, returned by `getAppIcon()`).
+  The library's filter row leads with the file count of the open folder (`totalCount` from `with()`,
+  the same query the grid runs) — the grid loads more tiles as the user scrolls, so the number of
+  tiles never answers "how much is in here"
 - There is no `media-detail` component: the selected file is edited inline in the library
   (`$selected`, tags, folder move)
 - YAML: `app-configs/media/lists/media-list.yml` + `navigation.yml` — keep the module copy and
