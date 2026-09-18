@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
@@ -201,14 +202,11 @@ it('uploads files into the current folder', function (): void {
         'name' => 'Uploads',
     ]);
 
-    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
-    file_put_contents($tmpFile, 'fake content');
-
     $filePayload = [
         'name' => 'in-folder.jpg',
         'extension' => 'txt',
         'size' => 12,
-        'path' => $tmpFile,
+        '_original' => UploadedFile::fake()->image('in-folder.jpg', 10, 10),
     ];
 
     Livewire::test('media::media-list')
@@ -216,7 +214,6 @@ it('uploads files into the current folder', function (): void {
         ->set('files', [$filePayload])
         ->call('store');
 
-    @unlink($tmpFile);
 
     $media = Media::where('name', 'in-folder.jpg')->first();
     expect($media)->not->toBeNull()
@@ -259,20 +256,15 @@ it('stores an upload inside the directory of the open folder', function (): void
         'name' => 'Uploads',
     ]);
 
-    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
-    file_put_contents($tmpFile, 'fake content');
-
     Livewire::test('media::media-list')
         ->call('openFolder', $folder->id)
         ->set('files', [[
             'name' => 'beleg.txt',
             'extension' => 'txt',
             'size' => 12,
-            'path' => $tmpFile,
+            '_original' => UploadedFile::fake()->create('beleg.txt', 1, 'text/plain'),
         ]])
         ->call('store');
-
-    @unlink($tmpFile);
 
     $media = Media::where('name', 'beleg.txt')->first();
 

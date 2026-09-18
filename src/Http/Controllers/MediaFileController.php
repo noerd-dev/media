@@ -18,7 +18,11 @@ class MediaFileController extends Controller
     {
         $this->authorizeTenant($media);
 
-        return Storage::disk($media->disk)->response($media->path);
+        return Storage::disk($media->disk)->response(
+            $media->path,
+            null,
+            $this->safeDeliveryHeaders($media),
+        );
     }
 
     /**
@@ -28,7 +32,13 @@ class MediaFileController extends Controller
     {
         $this->authorizeTenant($media);
 
-        return Storage::disk($media->disk)->response($media->thumbnail ?? $media->path);
+        // Falls back to the original when no thumbnail exists, so it needs the
+        // same delivery guard.
+        return Storage::disk($media->disk)->response(
+            $media->thumbnail ?? $media->path,
+            null,
+            $media->thumbnail !== null ? ['X-Content-Type-Options' => 'nosniff'] : $this->safeDeliveryHeaders($media),
+        );
     }
 
     /**
@@ -62,5 +72,32 @@ class MediaFileController extends Controller
     private function authorizeTenant(Media $media): void
     {
         abort_unless($media->tenant_id === Auth::user()->selected_tenant_id, 404);
+    }
+
+    /**
+     * Headers that keep a stored file from becoming active content.
+     *
+     * The library streams from the application's OWN origin, so a document
+     * that can carry script — an SVG, an HTML file — would run in the viewing
+     * user's authenticated session. Uploads of those types are refused
+     * (config('media.allowed_extensions')), but installations widen that list
+     * and older libraries already hold such files, so delivery says no as
+     * well: nosniff stops a mislabelled file from being re-interpreted, and
+     * the script-bearing types are handed over as a download instead of being
+     * rendered.
+     *
+     * @return array<string, string>
+     */
+    private function safeDeliveryHeaders(Media $media): array
+    {
+        $headers = ['X-Content-Type-Options' => 'nosniff'];
+
+        $scriptBearing = ['svg', 'svgz', 'html', 'htm', 'xhtml', 'xml', 'xsl', 'mhtml'];
+
+        if (in_array(mb_strtolower((string) $media->extension), $scriptBearing, true)) {
+            $headers['Content-Disposition'] = 'attachment; filename="' . addslashes((string) $media->name) . '"';
+        }
+
+        return $headers;
     }
 }

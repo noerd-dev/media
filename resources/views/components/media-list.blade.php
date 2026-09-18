@@ -5,6 +5,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Noerd\Facades\Noerd;
+use Noerd\Helpers\AccessHelper;
 use Noerd\Media\Exceptions\MediaInUseException;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
@@ -150,12 +151,29 @@ new class extends Component {
 
     public function store(): void
     {
+        // An upload creates a Media record, so it needs the create ability —
+        // this action is reachable without the "New" button that hides itself.
+        abort_unless(AccessHelper::canCreateObject(Media::class), 403);
+
+        // The client can rewrite the whole $files array, so the target folder
+        // is re-validated here as well: openFolder() checks accessibility, but
+        // a direct property update never passes through it.
+        $folderId = $this->currentFolderId !== null && $this->folderIsAccessible($this->currentFolderId)
+            ? $this->currentFolderId
+            : null;
+
         $mediaUploadService = app()->make(MediaUploadService::class);
 
         foreach ($this->files as $file) {
-            // The folder decides where the bytes go — the disk mirrors the
-            // library, so it cannot be applied after the write.
-            $mediaUploadService->storeFromArray($file, $this->currentFolderId);
+            try {
+                // The folder decides where the bytes go — the disk mirrors the
+                // library, so it cannot be applied after the write.
+                $mediaUploadService->storeFromArray($file, $folderId);
+            } catch (\InvalidArgumentException) {
+                // A fabricated entry describes no live upload; skip it rather
+                // than failing the whole batch.
+                continue;
+            }
         }
 
         $this->files = [];
