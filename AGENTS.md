@@ -24,12 +24,14 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 - `app-configs/stubs/add_media_tenant_app.php.stub` — the idempotent tenant-app migration
   published by `noerd:install-media`
 - `config/media.php` — `disk`, `private`, `allowed_extensions`, `max_upload_size`,
-  `ghostscript_binary`; merged by the provider, copied into the host by the install command
+  `ghostscript_binary`, `variants` / `variant_quality` / `variant_max_pixels`; merged by the
+  provider, copied into the host by the install command
 - `resources/views/components/` — Livewire single-file components, flat, Livewire namespace
   `media::` (`media-list`, `folder-create`, `folder-picker`), the Blade partials `media-thumbnail`
   and `partials/folder-tree-node`, the app icon `icons/app`
 - `src/Models/` (`Media`, `MediaFolder`, `MediaTag`), `src/Services/` (`MediaResolver`,
-  `MediaUploadService`, `ImagePreviewService`, `PdfThumbnailGenerator`, `MediaUsageRegistry`,
+  `MediaUploadService`, `ImagePreviewService`, `ImageVariantService` (size-limited delivery
+  variants behind the signed `media.image` route), `PdfThumbnailGenerator`, `MediaUsageRegistry`,
   `AppFolderRegistry`, `AppFolderService`, `AppFolderAccess`, `MediaPathService`, `MediaMover`),
   `src/Scopes/AppFolderVisibilityScope.php`, `src/Support/FileTypeIcon.php` (the icon a file gets
   when it has no preview),
@@ -49,6 +51,7 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 - `php artisan media:restructure [--tenant=] [--dry-run]` — one-time move from the historic flat
   layout into the folder-mirroring one
 - `php artisan media:sync [--tenant=] [--prune] [--dry-run]` — reconcile library and disk
+- `php artisan media:clear-variants [--tenant=]` — drop the cached image delivery variants
 
 ## Working on the module
 

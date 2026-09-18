@@ -64,6 +64,20 @@ it('resolves the preview url through the authenticated route in private mode', f
         ->toBe(route('media.thumbnail', $media));
 });
 
+it('resolves a signed delivery url for an image and the original url for a file that cannot be scaled', function (): void {
+    $photo = Media::factory()->file($this->tenantId, 'photo.jpg')->create();
+    $icon = Media::factory()->file($this->tenantId, 'icon.svg')->create();
+
+    $resolver = app(MediaResolverContract::class);
+
+    expect($resolver->getImageUrl($photo->id))
+        ->toStartWith("/media/image/{$photo->id}/web?")
+        ->toContain('signature=')
+        ->and($resolver->getImageUrl($icon->id))->toBe($resolver->getRelativeUrl($icon->id))
+        ->and($resolver->getImageUrl($photo->id, 'unknown'))->toBe($resolver->getRelativeUrl($photo->id))
+        ->and($resolver->getImageUrl($photo->id + 9999))->toBeNull();
+});
+
 it('returns a storage-relative url for a stored media', function (): void {
     $media = Media::factory()->create([
         'tenant_id' => $this->tenantId,

@@ -12,7 +12,8 @@ use Noerd\Media\Models\MediaFolder;
  * The disk mirrors the library: a file lives at
  * `{tenant_id}/{folder segments}/{name}`, so the storage root can be browsed,
  * backed up and filled by hand. Generated thumbnails stay flat in a hidden
- * `{tenant_id}/.thumbnails` directory — they are derived data, not content, and
+ * `{tenant_id}/.thumbnails` directory, the size-limited delivery variants in
+ * `{tenant_id}/.variants/{variant}` — they are derived data, not content, and
  * the reconciler skips dot directories.
  */
 class MediaPathService
@@ -21,6 +22,11 @@ class MediaPathService
      * The hidden per-tenant directory holding generated thumbnails.
      */
     public const THUMBNAIL_DIR = '.thumbnails';
+
+    /**
+     * The hidden per-tenant directory holding the generated delivery variants.
+     */
+    public const VARIANT_DIR = '.variants';
 
     /**
      * Longest folder or file segment written to disk.
@@ -180,6 +186,35 @@ class MediaPathService
     public function thumbnailDirectory(int $tenantId): string
     {
         return $tenantId . '/' . self::THUMBNAIL_DIR;
+    }
+
+    /**
+     * The hidden directory holding a tenant's generated delivery variants.
+     */
+    public function variantDirectory(int $tenantId): string
+    {
+        return $tenantId . '/' . self::VARIANT_DIR;
+    }
+
+    /**
+     * Where a delivery variant of a file is cached. The key is the media id —
+     * moving or renaming the file keeps its variants — and the width is part
+     * of the name, so a changed configuration never serves a stale size.
+     */
+    public function variantPath(Media $media, string $variant, int $width, string $extension): string
+    {
+        return $this->variantDirectory((int) $media->tenant_id)
+            . '/' . $variant
+            . '/' . $media->getKey() . '_' . $width . '.' . $extension;
+    }
+
+    /**
+     * Whether a path lies inside one of the tenant's generated directories.
+     */
+    public function isGeneratedPath(int $tenantId, string $path): bool
+    {
+        return str_starts_with($path, $this->thumbnailDirectory($tenantId))
+            || str_starts_with($path, $this->variantDirectory($tenantId));
     }
 
     /**

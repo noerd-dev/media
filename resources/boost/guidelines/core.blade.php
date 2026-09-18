@@ -36,7 +36,8 @@ this module.
   it can be browsed, backed up and filled by hand. `medias.name` IS the basename on disk; a name
   the target directory already holds is numbered (`beleg-2.pdf`). Thumbnails stay flat in the
   hidden `{tenant_id}/.thumbnails/` as `thumb_*.jpg` (images, 500px wide via Intervention Image GD)
-  or `pdf_*.jpg` (PDF page 1) — they are generated data, and the reconciler skips dot directories
+  or `pdf_*.jpg` (PDF page 1), the delivery variants in `{tenant_id}/.variants/{variant}/` as
+  `{mediaId}_{width}.webp` — both are generated data, and the reconciler skips dot directories
 - Names stay READABLE: only what breaks a path is stripped (separators, control characters,
   wildcards, a leading dot) — umlauts and other UTF-8 characters survive, in folder names and file
   names alike. A transliterated `Vertraege` next to a hand-made `Verträge` directory would be two
@@ -54,8 +55,8 @@ this module.
   leaves the bytes behind
 - A consequence for consumers: a file's path is only true until it is moved. NEVER persist a media
   URL or path in another table — persist the media id and resolve the URL when rendering
-  (`MediaResolverContract::getRelativeUrl()` / `getPreviewUrl()`, or `storeUploadedFileReference()`
-  for an upload)
+  (`MediaResolverContract::getImageUrl()` for visitors, `getPreviewUrl()` for a backend tile,
+  `getRelativeUrl()` for the original, or `storeUploadedFileReference()` for an upload)
 - Both commands run headless (explicit `tenant_id`, `withoutGlobalScopes()`) and only touch
   directories named after an existing tenant: the media disk may hold content the library does not
   own (CRM print mailings when `crm.storage.disk` points at it)
@@ -64,8 +65,8 @@ this module.
 - The provider binds `Noerd\Contracts\MediaResolverContract` to `Noerd\Media\Services\MediaResolver`
   (the core falls back to `NullMediaResolver` via `singletonIf` when Media is not installed).
   Consuming modules and core field types (`image` field, `setup-collection-detail`) depend ONLY on
-  the contract: `getPreviewUrl()`, `exists()`, `getRelativeUrl()`, `storeUploadedFile()`,
-  `isAvailable()`, `pickerComponent()` — never `use` a `Noerd\Media\*` class from an optional
+  the contract: `getPreviewUrl()`, `exists()`, `getRelativeUrl()`, `getImageUrl()`,
+  `storeUploadedFile()`, `isAvailable()`, `pickerComponent()` — never `use` a `Noerd\Media\*` class from an optional
   module that does not declare `noerd/media` in its `composer.json`
 - `pickerComponent()` returns `media::media-list`: open it with `Noerd::modal('media::media-list',
   [...])` passing `selectMode`, `selectContext`, `selectToken` (or `listActionMethod: 'selectAction'`
@@ -121,7 +122,36 @@ this module.
 - Private media: `config('media.private')` (`MEDIA_PRIVATE`) relocates the `media` disk to
   `storage/app/media` at boot (`MediaServiceProvider::configurePrivateDisk()`); files are then only
   reachable through `MediaFileController` (`media.file`, `media.thumbnail`), which streams to a
-  logged-in user of the SAME tenant (404 otherwise). Move existing files with `noerd:media-relocate`
+  logged-in user of the SAME tenant (404 otherwise). Move existing files with `noerd:media-relocate`.
+  Images a public page embeds through `getImageUrl()` keep working in private mode — the signed
+  `media.image` route streams them; an SVG or PDF is then not reachable for anonymous visitors
+
+### Image variants (delivery to visitors)
+
+- The original is stored UNTOUCHED (a receipt photo, an archive scan keeps every pixel) and the
+  500px thumbnail is a backend tile. What a VISITOR gets — public website, e-mail — is a
+  size-limited variant: `Media::imageUrl($variant = 'web')` /
+  `MediaResolverContract::getImageUrl($mediaId, $variant)`. Never put `url()` /
+  `getRelativeUrl()` of an image into public markup — that delivers the oversized original
+- Variants are CONFIGURATION: `config('media.variants')` (name => maximum width, shipped
+  `web => 1920`), `variant_quality`, `variant_max_pixels`. A project adds names (`teaser => 640`)
+  in its published config — never a width in module code
+- `ImageVariantService` is the only place a variant is made: `supports()` (png/jpg/jpeg/webp AND
+  a configured name), `pathFor()` (generated on the FIRST request — `scaleDown()`, never upscaled,
+  WebP, or PNG/JPEG when GD lacks WebP — then cached; `null` = deliver the original: above the
+  pixel budget GD would run out of memory, which cannot be caught), `forget()` (called by
+  `MediaMover::deleteFile()`). The cache key is the media id, so moving a file keeps its variants;
+  the width is part of the file name, so a changed width never serves a stale size —
+  `media:clear-variants` drops the old files. It reads bytes through `Storage::get()`, never
+  `->path()`: the variant path works on any disk
+- The route `media.image` (`/media/image/{mediaId}/{variant}`) sits OUTSIDE the `web` and `noerd`
+  groups — no session, no login — behind `signed:relative`. The signature is the authorization:
+  only a URL the application rendered is answered, so ids cannot be enumerated (receipts share the
+  table), and it is relative because websites run on their own domains. No expiry: the URL is
+  stable and the response is `immutable`, `v` (the row's `updated_at`) busts the cache. The
+  controller looks the row up `withoutGlobalScopes()` — the visitor is anonymous, and a backend
+  user of another tenant must not lose the image to the tenant scope. A file that cannot be scaled
+  (SVG, GIF, AVIF, PDF) gets its plain original URL from `imageUrl()` instead of the route
 
 ### Structure
 - Livewire components (flat, `resources/views/components/`, namespace `media::`): `media-list`
@@ -142,7 +172,7 @@ this module.
   previews are embedded in other apps, so any logged-in tenant user must load them; never add
   `app-access:media` to the file routes
 - Config: `config/media.php` (`disk`, `private`, `allowed_extensions`, `max_upload_size`,
-  `ghostscript_binary`), merged via `mergeConfigFrom()` and published by the install command
+  `ghostscript_binary`, `variants`, `variant_quality`, `variant_max_pixels`), merged via `mergeConfigFrom()` and published by the install command
   (existing file left untouched) — new keys go into the module config AND the host copy
 - Translations: `resources/lang/de.json` (English keys); migrations / factories (`MediaFactory`
   with the `file($tenantId, $name)` state, `MediaFolderFactory`) / tests live inside the module
@@ -165,6 +195,9 @@ this module.
   and media rows without a file are reported. `--prune` deletes those rows THROUGH the model, so
   the `MediaUsageRegistry` still refuses a file another module needs. A file moved by hand shows up
   as an import plus an orphaned row — there is no content hash. The module schedules nothing
+- `php artisan media:clear-variants {--tenant=}` — deletes the cached delivery variants (always
+  safe, they are regenerated on the next request); run it after changing a width in
+  `media.variants`
 
 ### Tests
 - Pest tests in `tests/`, bound to the host `Tests\TestCase` (+ `RefreshDatabase` where data is

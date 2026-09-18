@@ -15,7 +15,10 @@ use Noerd\Media\Models\MediaFolder;
  */
 class MediaMover
 {
-    public function __construct(private readonly MediaPathService $paths) {}
+    public function __construct(
+        private readonly MediaPathService $paths,
+        private readonly ImageVariantService $variants,
+    ) {}
 
     /**
      * Move a file into a folder (null = the tenant root), renaming it when the
@@ -103,8 +106,8 @@ class MediaMover
     }
 
     /**
-     * Delete a file and its generated thumbnail. The thumbnail used to be left
-     * behind on every deletion path.
+     * Delete a file with everything generated from it: the thumbnail and the
+     * cached delivery variants.
      */
     public function deleteFile(Media $media): void
     {
@@ -117,6 +120,8 @@ class MediaMover
         if ($media->thumbnail && $disk->exists($media->thumbnail)) {
             $disk->delete($media->thumbnail);
         }
+
+        $this->variants->forget($media);
     }
 
     /**
@@ -141,7 +146,7 @@ class MediaMover
 
     /**
      * Drop directories that hold neither files nor sub-directories any more,
-     * deepest first. The tenant root and the hidden thumbnail directory stay.
+     * deepest first. The tenant root and the hidden generated directories stay.
      */
     public function pruneEmptyDirectories(int $tenantId): void
     {
@@ -151,7 +156,7 @@ class MediaMover
         usort($directories, fn(string $a, string $b): int => mb_substr_count($b, '/') <=> mb_substr_count($a, '/'));
 
         foreach ($directories as $directory) {
-            if ($this->isThumbnailDirectory($tenantId, $directory)) {
+            if ($this->paths->isGeneratedPath($tenantId, $directory)) {
                 continue;
             }
 
@@ -229,11 +234,6 @@ class MediaMover
         }
 
         return $ids;
-    }
-
-    private function isThumbnailDirectory(int $tenantId, string $directory): bool
-    {
-        return str_starts_with($directory, $this->paths->thumbnailDirectory($tenantId));
     }
 
     private function disk(): string

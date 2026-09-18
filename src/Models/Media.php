@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Noerd\Media\Database\Factories\MediaFactory;
 use Noerd\Media\Exceptions\MediaInUseException;
 use Noerd\Media\Scopes\AppFolderVisibilityScope;
+use Noerd\Media\Services\ImageVariantService;
 use Noerd\Media\Services\MediaUsageRegistry;
 use Noerd\Traits\BelongsToTenant;
 use Noerd\Uki\Models\TextDocument;
@@ -69,6 +71,31 @@ class Media extends Model
         }
 
         return Storage::disk($this->disk)->url($this->thumbnail ?? $this->path);
+    }
+
+    /**
+     * The relative URL for DELIVERING the image to visitors (public website,
+     * e-mail): the signed `media.image` route, which answers with a
+     * size-limited, cached variant instead of the original. The signature is
+     * the authorization — the route needs no login, yet no id can be guessed —
+     * and it is relative, because a website runs on its own domain. Without an
+     * expiry the URL is stable, so browsers cache it; `v` changes with the row.
+     *
+     * A file that cannot be scaled (SVG, PDF, …) answers with its original URL.
+     */
+    public function imageUrl(string $variant = 'web'): string
+    {
+        if (! app(ImageVariantService::class)->supports($this, $variant)) {
+            $url = Storage::disk($this->disk)->url($this->path);
+
+            return mb_strstr($url, '/storage') ?: $url;
+        }
+
+        return URL::signedRoute('media.image', [
+            'mediaId' => $this->getKey(),
+            'variant' => $variant,
+            'v' => $this->updated_at?->getTimestamp() ?? 0,
+        ], absolute: false);
     }
 
     /**

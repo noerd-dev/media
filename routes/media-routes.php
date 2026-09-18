@@ -20,3 +20,13 @@ Route::prefix('media')
         Route::get('/file/{media}', [MediaFileController::class, 'show'])->name('file');
         Route::get('/thumb/{media}', [MediaFileController::class, 'thumbnail'])->name('thumbnail');
     });
+
+// Public image delivery (website, e-mail): a size-limited, cached variant of
+// the original. Deliberately outside the web and noerd groups — no session, no
+// login. The relative signature is the authorization: only a URL the
+// application rendered itself (Media::imageUrl()) is answered, so no media id
+// can be enumerated, and it validates on every domain a website runs on.
+Route::get('media/image/{mediaId}/{variant}', [MediaFileController::class, 'image'])
+    ->whereNumber('mediaId')
+    ->middleware('signed:relative')
+    ->name('media.image');

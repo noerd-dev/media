@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
 use Noerd\Media\Services\MediaMover;
+use Noerd\Media\Services\MediaPathService;
 use Noerd\Models\NoerdUser;
 
 uses(Tests\TestCase::class, RefreshDatabase::class);
@@ -89,6 +90,30 @@ it('deletes the generated thumbnail along with the file', function (): void {
     Storage::disk('media')->assertMissing($thumbnail);
 });
 
+it('deletes the cached delivery variants along with the file', function (): void {
+    config(['media.variants' => ['web' => 600]]);
+    $media = zzStoredMedia($this->tenantId, null, 'photo.jpg');
+    $variant = app(MediaPathService::class)->variantPath($media, 'web', 600, 'webp');
+    Storage::disk('media')->put($variant, 'VARIANT');
+
+    $this->mover->deleteFile($media);
+
+    Storage::disk('media')->assertMissing($variant);
+});
+
+it('keeps the cached variants of a file that is moved', function (): void {
+    config(['media.variants' => ['web' => 600]]);
+    $folder = MediaFolder::create(['tenant_id' => $this->tenantId, 'name' => 'Ziel']);
+    $media = zzStoredMedia($this->tenantId, null, 'photo.jpg');
+    $variant = app(MediaPathService::class)->variantPath($media, 'web', 600, 'webp');
+    Storage::disk('media')->put($variant, 'VARIANT');
+
+    $this->mover->moveToFolder($media, $folder);
+
+    expect(app(MediaPathService::class)->variantPath($media->fresh(), 'web', 600, 'webp'))->toBe($variant);
+    Storage::disk('media')->assertExists($variant);
+});
+
 it('creates the directory of an empty folder', function (): void {
     $folder = MediaFolder::create(['tenant_id' => $this->tenantId, 'name' => 'Leer']);
 
@@ -98,8 +123,9 @@ it('creates the directory of an empty folder', function (): void {
         ->toContain("{$this->tenantId}/Leer");
 });
 
-it('leaves the thumbnail directory alone when pruning', function (): void {
+it('leaves the generated directories alone when pruning', function (): void {
     Storage::disk('media')->makeDirectory("{$this->tenantId}/.thumbnails");
+    Storage::disk('media')->makeDirectory("{$this->tenantId}/.variants/web");
     Storage::disk('media')->makeDirectory("{$this->tenantId}/Leer");
 
     $this->mover->pruneEmptyDirectories($this->tenantId);
@@ -107,6 +133,7 @@ it('leaves the thumbnail directory alone when pruning', function (): void {
     $directories = Storage::disk('media')->directories((string) $this->tenantId);
 
     expect($directories)->toContain("{$this->tenantId}/.thumbnails")
+        ->and($directories)->toContain("{$this->tenantId}/.variants")
         ->and($directories)->not->toContain("{$this->tenantId}/Leer");
 });
 

@@ -39,6 +39,11 @@ class MediaResolver implements MediaResolverContract
         return mb_strstr($url, '/storage');
     }
 
+    public function getImageUrl(int $mediaId, string $variant = 'web'): ?string
+    {
+        return Media::find($mediaId)?->imageUrl($variant);
+    }
+
     public function storeUploadedFile(mixed $uploadedFile): ?string
     {
         $media = $this->uploadService->storeFromUploadedFile($uploadedFile);

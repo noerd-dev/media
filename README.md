@@ -66,6 +66,34 @@ as a fallback when it happens to be installed — PDFs are stored without a thum
 library renders a file-type tile instead. Image thumbnails are unaffected; they run through Intervention
 Image's GD driver.
 
+## Image variants
+
+The original of an upload is never touched, and the 500px thumbnail is only a tile for the library.
+What a visitor of a public page receives is a size-limited **variant**:
+
+```php
+$url = app(\Noerd\Contracts\MediaResolverContract::class)->getImageUrl($mediaId);          // "web"
+$url = app(\Noerd\Contracts\MediaResolverContract::class)->getImageUrl($mediaId, 'teaser');
+```
+
+The URL points at the signed route `/media/image/{id}/{variant}`. On its first request the image is
+scaled down to the configured width (never upscaled), encoded as WebP and cached in the hidden
+`{tenant}/.variants` directory; afterwards it is only streamed, with an `immutable` cache header.
+The route needs no login — the signature is the authorization, so no media id can be guessed — and
+also works while `media.private` is on. SVG, GIF, AVIF and PDF files are delivered as they are.
+
+```php
+// config/media.php
+'variants' => [
+    'web' => 1920,      // name => maximum width in pixels
+    'teaser' => 640,
+],
+'variant_quality' => 82,
+'variant_max_pixels' => 40_000_000,   // larger images are delivered as the original
+```
+
+Run `php artisan media:clear-variants` after changing a width.
+
 ## App folders
 
 A module can own folders in every tenant's media library — the accounting module, for example,
@@ -98,6 +126,7 @@ app(\Noerd\Media\Services\AppFolderRegistry::class)
 php artisan noerd:install-media          # Install configs, navigation, storage disk and migrations
 php artisan noerd:update-media           # Update the published YAML configuration files
 php artisan media:regenerate-thumbnails  # Regenerate thumbnails for existing media
+php artisan media:clear-variants         # Delete the cached image delivery variants
 ```
 
 ## Auto installed packages

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Noerd\Events\TenantAppAssigned;
+use Noerd\Media\Commands\MediaClearVariantsCommand;
 use Noerd\Media\Commands\MediaRelocateCommand;
 use Noerd\Media\Commands\MediaRestructureCommand;
 use Noerd\Media\Commands\MediaSyncCommand;
@@ -78,6 +79,7 @@ class MediaServiceProvider extends ServiceProvider
                 MediaRelocateCommand::class,
                 MediaRestructureCommand::class,
                 MediaSyncCommand::class,
+                MediaClearVariantsCommand::class,
             ]);
         }
     }
