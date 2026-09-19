@@ -130,6 +130,10 @@ new class extends Component {
             'parentFolderId' => $parentFolderId,
             'parentFolderName' => $parentFolderName,
             'hasParentTile' => $currentFolder !== null,
+            // Whether the "New folder" tile renders here, and whether this
+            // user may change that for a folder.
+            'currentFolderTakesSubfolders' => $currentFolder?->allowsSubfolders() ?? true,
+            'canManageFolders' => $this->canManageFolders(),
         ];
     }
 
@@ -365,7 +369,53 @@ new class extends Component {
 
     public function openCreateFolderModal(): void
     {
+        // The tile is hidden in a flat folder, but the action is callable
+        // from the client regardless.
+        if (! $this->folderTakesSubfolders($this->currentFolderId)) {
+            return;
+        }
+
         Noerd::modal('media::folder-create', ['parentFolderId' => $this->currentFolderId]);
+    }
+
+    /**
+     * Only a tenant admin decides whether a folder takes subfolders — for the
+     * app-owned folders too, whose pipelines read the top level only.
+     */
+    public function canManageFolders(): bool
+    {
+        // The same user the rest of the library resolves the tenant from.
+        return (bool) Auth::user()?->isAdmin();
+    }
+
+    /**
+     * Existing sub-folders stay whatever the flag says — only new ones are
+     * refused, so this never fails.
+     */
+    public function toggleFolderSubfolders(int $folderId): void
+    {
+        if (! $this->canManageFolders()) {
+            return;
+        }
+
+        $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
+
+        if (! $folder) {
+            return;
+        }
+
+        $folder->forceFill(['allows_subfolders' => ! $folder->allowsSubfolders()])->save();
+    }
+
+    private function folderTakesSubfolders(?int $folderId): bool
+    {
+        if ($folderId === null) {
+            return true;
+        }
+
+        $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
+
+        return $folder === null || $folder->allowsSubfolders();
     }
 
     #[On('mediaFolderCreated')]
@@ -565,6 +615,17 @@ new class extends Component {
                             </button>
                         @endforeach
                     </nav>
+                    @if($canManageFolders && $currentFolderId !== null)
+                        {{-- Whether this folder takes new sub-folders. Admins only;
+                             sub-folders that already exist are never touched. --}}
+                        <label class="ml-auto flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap cursor-pointer">
+                            <input type="checkbox"
+                                   wire:click="toggleFolderSubfolders({{ $currentFolderId }})"
+                                   @checked($currentFolderTakesSubfolders)
+                                   class="rounded border-gray-300 text-brand-primary focus:ring-brand-primary"/>
+                            {{ __('Allow subfolders') }}
+                        </label>
+                    @endif
                 </div>
             @endunless
 
@@ -651,6 +712,11 @@ new class extends Component {
                             </svg>
                             <span class="mt-2 text-sm truncate w-full text-center px-2">{{ $folder->label() }}</span>
                         </button>
+                        @unless($folder->allowsSubfolders())
+                            <span class="absolute top-2 left-2 z-10 text-gray-400" title="{{ __('No subfolders allowed') }}">
+                                <x-heroicons::outline.lock-closed class="size-4"/>
+                            </span>
+                        @endunless
                         @unless($folder->isSystem())
                             <button type="button"
                                     wire:click="deleteFolder({{ $folder->id }})"
@@ -660,7 +726,7 @@ new class extends Component {
                         @endunless
                     </div>
                 @endforeach
-                @unless($hasActiveFilters)
+                @if(! $hasActiveFilters && $currentFolderTakesSubfolders)
                     <div wire:key="folder-tile-create"
                          class="relative w-full aspect-square p-4 border border-dashed border-gray-400 hover:bg-gray-100">
                         <button type="button"
@@ -672,7 +738,7 @@ new class extends Component {
                             <span class="mt-2 text-sm truncate w-full text-center px-2">{{ __('New folder') }}</span>
                         </button>
                     </div>
-                @endunless
+                @endif
                 @foreach($listConfig['rows'] as $row)
                     @php
                         $isSelected = in_array($row->id, $selectedMediaIds, true);

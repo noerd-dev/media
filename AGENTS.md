@@ -36,7 +36,7 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
   `src/Scopes/AppFolderVisibilityScope.php`, `src/Support/FileTypeIcon.php` (the icon a file gets
   when it has no preview),
   `src/Listeners/EnsureAppFoldersOnAppAssignment.php`, `src/Exceptions/` (`MediaInUseException`,
-  `SystemFolderProtectedException`), `src/Http/Controllers/MediaFileController.php`,
+  `SystemFolderProtectedException`, `SubfoldersNotAllowedException`), `src/Http/Controllers/MediaFileController.php`,
   `src/Commands/`, `src/Providers/MediaServiceProvider.php`
 - `routes/media-routes.php`, `database/migrations|factories/`, `tests/` (Pest),
   `resources/lang/de.json`
@@ -68,6 +68,9 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
   `tests/Support/CreatesAppFolderFixtures`.
   Project-specific fields go into `custom_attributes`, never into module code or module YAML
 - Upload limits and formats are configuration (`config/media.php`), not code
+- Whether a folder takes NEW sub-folders is a per-folder admin setting
+  (`media_folders.allows_subfolders`), enforced on the model — not a module declaration and not a
+  config key. Blocking never removes existing sub-folders
 - The disk mirrors the library (`{tenant}/{folders}/{name}`): build paths only through
   `MediaPathService` and move bytes only through `MediaMover` — never `Storage::move()`/`delete()`
   on a media file, and never a hand-built path. Folder changes are not model events, so every call

@@ -28,7 +28,19 @@ new class extends Component {
 
         // The parent id comes from the client: an app folder the user may not
         // see is no valid parent (the scopes on MediaFolder hide it).
-        if ($this->parentFolderId !== null && ! MediaFolder::whereKey($this->parentFolderId)->exists()) {
+        $parent = $this->parentFolderId === null
+            ? null
+            : MediaFolder::whereKey($this->parentFolderId)->first();
+
+        if ($this->parentFolderId !== null && ! $parent) {
+            return;
+        }
+
+        // A tenant admin declared this folder flat. The model would refuse the
+        // insert anyway; saying so here keeps the modal usable.
+        if ($parent && ! $parent->allowsSubfolders()) {
+            $this->addError('name', __('This folder does not allow subfolders.'));
+
             return;
         }
 

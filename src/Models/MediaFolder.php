@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Noerd\Media\Database\Factories\MediaFolderFactory;
+use Noerd\Media\Exceptions\SubfoldersNotAllowedException;
 use Noerd\Media\Exceptions\SystemFolderProtectedException;
 use Noerd\Media\Scopes\AppFolderVisibilityScope;
 use Noerd\Media\Services\MediaPathService;
@@ -43,6 +44,16 @@ class MediaFolder extends Model
     public function isSystem(): bool
     {
         return $this->system_key !== null;
+    }
+
+    /**
+     * Whether folders may be created inside this one. A tenant admin decides
+     * it per folder — for app folders too: an inbox whose pipeline only reads
+     * the top level is better kept flat. Unset means allowed.
+     */
+    public function allowsSubfolders(): bool
+    {
+        return (bool) ($this->allows_subfolders ?? true);
     }
 
     /**
@@ -112,6 +123,22 @@ class MediaFolder extends Model
             }
         });
 
+        // A folder declared flat takes no children — neither a new folder nor
+        // one moved into it.
+        static::creating(function (self $folder): void {
+            $folder->assertParentTakesSubfolders();
+        });
+
+        // Blocking a folder that already holds sub-folders is allowed: what is
+        // there stays, nothing new arrives. Only a folder coming from OUTSIDE
+        // is refused — the delete cascade moves children up INSIDE the folder
+        // they already lived in, and must keep working.
+        static::updating(function (self $folder): void {
+            if ($folder->isDirty('parent_id')) {
+                $folder->assertParentTakesSubfolders((int) $folder->getOriginal('parent_id') ?: null);
+            }
+        });
+
         static::updating(function (self $folder): void {
             if ($folder->getOriginal('system_key') === null) {
                 return;
@@ -126,5 +153,61 @@ class MediaFolder extends Model
     protected static function newFactory(): MediaFolderFactory
     {
         return MediaFolderFactory::new();
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'allows_subfolders' => 'boolean',
+        ];
+    }
+
+    /**
+     * The parent is read without the global scopes: the rule is structural,
+     * and a headless caller (the reconciler, a module filing a document) has
+     * neither a signed-in user nor a selected tenant.
+     *
+     * @param  int|null  $movedFrom  the parent the folder is leaving, if any
+     */
+    private function assertParentTakesSubfolders(?int $movedFrom = null): void
+    {
+        if ($this->parent_id === null) {
+            return;
+        }
+
+        $parent = self::withoutGlobalScopes()->whereKey($this->parent_id)->first();
+
+        if (! $parent || $parent->allowsSubfolders()) {
+            return;
+        }
+
+        // Already inside that folder — an intermediate folder was deleted and
+        // its children move up. Nothing new arrives, so the block does not
+        // apply.
+        if ($movedFrom !== null && $parent->isAncestorOf($movedFrom)) {
+            return;
+        }
+
+        throw new SubfoldersNotAllowedException($parent);
+    }
+
+    /**
+     * Whether this folder sits somewhere above the given one.
+     */
+    private function isAncestorOf(int $folderId): bool
+    {
+        $node = self::withoutGlobalScopes()->whereKey($folderId)->first();
+
+        while ($node) {
+            if ((int) $node->getKey() === (int) $this->getKey()) {
+                return true;
+            }
+
+            $node = $node->parent_id === null
+                ? null
+                : self::withoutGlobalScopes()->whereKey($node->parent_id)->first();
+        }
+
+        return false;
     }
 }

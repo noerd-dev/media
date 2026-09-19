@@ -112,13 +112,31 @@ app(\Noerd\Media\Services\AppFolderRegistry::class)
 - The label is an English translation key of the registering module (translated in its `de.json`)
   and rendered through `MediaFolder::label()`
 - App folders cannot be renamed, moved or deleted (`SystemFolderProtectedException`, no delete
-  button in the library); users may create sub-folders inside them
+  button in the library); users may create sub-folders inside them unless a tenant admin blocked
+  that (see "Flat folders")
 - Users who may not use the owning app — not assigned to the tenant, or denied by the app
   permission, e.g. a noerd-plus grant — do not see the folder, its sub-folders or the files in
   them. A global scope on `MediaFolder` and `Media` (`AppFolderVisibilityScope`) covers the
   library, the search, the folder picker and the file routes. Console commands and queue workers
   are not filtered; a service acting for a tenant lifts the scopes with `withoutGlobalScopes()`
   and an explicit tenant id
+
+## Blocking sub-folders
+
+Some folders have to stay flat — an import inbox whose pipeline only reads the top level, a drop
+folder a consumer watches. A **tenant admin** decides that per folder: open the folder and untick
+**"Allow subfolders"** right of the breadcrumb. It works for app folders exactly like for a user's
+own folder.
+
+- The setting is the column `media_folders.allows_subfolders` (default `true`); read it through
+  `MediaFolder::allowsSubfolders()`
+- Blocking removes nothing: sub-folders that already exist stay, with their files. Only new ones
+  are refused, so a folder can be blocked at any time
+- Creating a folder inside a blocked folder — or moving one in from elsewhere — throws
+  `SubfoldersNotAllowedException`. The rule lives on the model, so the library, the folder-create
+  modal, a move and tinker are covered alike. Children moving up *within* the blocked folder (the
+  delete cascade) are unaffected
+- Everyone sees a lock icon on such a folder's tile; inside it there is no "New folder" tile
 
 ## Artisan Commands
 

@@ -95,8 +95,8 @@ this module.
   tenant id — usable from the scheduler
 - Protection lives on the model (`MediaFolder::booted()`): deleting, renaming or moving an app
   folder throws `SystemFolderProtectedException`; the library hides the delete button and
-  `deleteFolder()` ignores it. Users may create sub-folders inside; a module renaming its label
-  is applied quietly by the service
+  `deleteFolder()` ignores it. Users may create sub-folders inside unless an admin forbade it
+  (below); a module renaming its label is applied quietly by the service
 - Visibility: `AppFolderVisibilityScope` is a GLOBAL scope on `MediaFolder` AND `Media` — app
   folders whose app the user may not use (`AccessHelper::canUseApp()`: not assigned to the
   tenant, or denied by the app permission / noerd-plus grants) plus their sub-folders and files
@@ -104,6 +104,23 @@ this module.
   file routes, client-supplied folder ids (`openFolder`, `moveMediaToFolder`, `folder-create`).
   Same contract as `TenantScope`: no signed-in user or no selected tenant → unfiltered. The hidden
   ids are memoized per request in `AppFolderAccess` (`forget()` in tests after changing access)
+
+### Blocked sub-folders (`allows_subfolders`)
+- Whether a folder takes NEW sub-folders is a per-folder setting a TENANT ADMIN makes, never a
+  module declaration: `media_folders.allows_subfolders` (default true), the checkbox "Allow
+  subfolders" right of the breadcrumb inside the folder (`media-list::toggleFolderSubfolders()`,
+  gated by `isAdmin()`). It applies to app folders exactly like to a user's own folder — an import
+  inbox whose pipeline only reads the top level is the case it exists for.
+  `AppFolderRegistry::register()` knows nothing about it, and `AppFolderService` never overwrites it
+- Blocking NEVER removes anything: sub-folders that were there stay, with their files, and the
+  folder can be blocked while they exist. Only an arrival is refused
+- The rule lives on the model (`MediaFolder::booted()`), so every path is covered — the library,
+  the `folder-create` modal, a move, tinker: creating a folder in a blocked parent, or moving one
+  in from OUTSIDE, throws `SubfoldersNotAllowedException`. A folder moving up INSIDE the blocked
+  folder is allowed (the delete cascade reparents children when an intermediate folder goes).
+  Read the flag through `MediaFolder::allowsSubfolders()` (unset = allowed), never the raw column
+- The screen only mirrors the rule: the "New folder" tile is hidden in a blocked folder, its tile
+  carries a lock icon, and `openCreateFolderModal()` refuses — a client-dispatched call reaches it
 
 ### Uploads and thumbnails
 - The upload UI is the core dropzone (`<livewire:dropzone wire:model.live="files" :rules="…">`,

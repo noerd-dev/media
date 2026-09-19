@@ -61,5 +61,9 @@
     "Width": "Breite",
     "of": "von",
     "results": "Ergebnisse",
-    "to": "bis"
+    "to": "bis",
+    "The folder \":name\" does not allow subfolders.": "Der Ordner „:name“ erlaubt keine Unterordner.",
+    "This folder does not allow subfolders.": "Dieser Ordner erlaubt keine Unterordner.",
+    "Allow subfolders": "Unterordner erlauben",
+    "No subfolders allowed": "Keine Unterordner erlaubt"
 }
