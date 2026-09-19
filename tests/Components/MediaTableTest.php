@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Models\MediaFolder;
@@ -19,16 +20,12 @@ beforeEach(function (): void {
 });
 
 it('stores uploaded files via service when calling store()', function (): void {
-    // Create a real temporary file to satisfy file_get_contents in service
-    $tmpFile = tempnam(sys_get_temp_dir(), 'upl');
-    file_put_contents($tmpFile, 'fake image content');
-
     // Use a non-image extension to bypass preview generation in tests
     $filePayload = [
         'name' => 'foo.jpg',
         'extension' => 'txt',
         'size' => 1234,
-        'path' => $tmpFile,
+        '_original' => UploadedFile::fake()->create('foo.txt', 1, 'text/plain'),
     ];
 
     $before = Media::count();
@@ -37,7 +34,6 @@ it('stores uploaded files via service when calling store()', function (): void {
         ->set('files', [$filePayload])
         ->call('store');
 
-    @unlink($tmpFile);
 
     expect(Media::count())->toBe($before + 1);
     $media = Media::latest('id')->first();

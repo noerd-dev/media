@@ -46,7 +46,7 @@ it('stores media from array payload (dropzone style)', function (): void {
         'name' => 'photo.jpg',
         'extension' => 'jpg',
         'size' => $fakeImage->getSize(),
-        'path' => $fakeImage->getRealPath(),
+        '_original' => $fakeImage,
     ];
 
     $before = MediaModel::count();
@@ -73,12 +73,14 @@ it('keeps readable file names and strips only what a path must not contain', fun
     if ($entrypoint === 'uploadedFile') {
         $media = $service->storeFromUploadedFile(UploadedFile::fake()->image($input, 800, 600));
     } else {
-        $fakeImage = UploadedFile::fake()->image('source.jpg', 800, 600);
+        // The dropzone array carries the upload itself; its plain scalars are
+        // client-controlled and therefore never read by the service.
+        $fakeImage = UploadedFile::fake()->image($input, 800, 600);
         $media = $service->storeFromArray([
             'name' => $input,
             'extension' => 'jpg',
             'size' => $fakeImage->getSize(),
-            'path' => $fakeImage->getRealPath(),
+            '_original' => $fakeImage,
         ]);
     }
 
@@ -90,6 +92,66 @@ it('keeps readable file names and strips only what a path must not contain', fun
     // one thing. Only what breaks a path is removed.
     'umlauts via uploaded file' => ['täst_öffnung_über.jpg', 'täst_öffnung_über.jpg', 'uploadedFile'],
     'umlauts via array payload' => ['groß_Übung.jpg', 'groß_Übung.jpg', 'array'],
-    'directory traversal via array payload' => ['../../etc/passwd.jpg', 'etcpasswd.jpg', 'array'],
+    // The array entrypoint reads the name off the upload, and an upload's
+    // client name is already reduced to its basename — so a traversal attempt
+    // loses its directories before the sanitizer ever sees it.
+    'directory traversal via array payload' => ['../../etc/passwd.jpg', 'passwd.jpg', 'array'],
     'wildcards via array payload' => ['re*chnung?.jpg', 'rechnung.jpg', 'array'],
 ]);
+
+// The dropzone array lives in a public Livewire property, so every plain value
+// in it is attacker-controlled. Reading a file system path out of it used to
+// turn any authenticated user into an arbitrary file reader (.env, keys). Only
+// the signed upload behind `_original` is trusted.
+it('refuses a fabricated payload that names a file on the server', function (array $payload): void {
+    $user = NoerdUser::factory()->withExampleTenant()->create();
+    $this->actingAs($user);
+
+    $secret = tempnam(sys_get_temp_dir(), 'zzsecret');
+    file_put_contents($secret, 'APP_KEY=base64:do-not-leak');
+
+    $payload = array_map(
+        fn ($value): mixed => $value === '__SECRET__' ? $secret : $value,
+        $payload,
+    );
+
+    $before = MediaModel::count();
+
+    try {
+        expect(fn () => app(MediaUploadService::class)->storeFromArray($payload))
+            ->toThrow(InvalidArgumentException::class);
+    } finally {
+        @unlink($secret);
+    }
+
+    expect(MediaModel::count())->toBe($before);
+    expect(Storage::disk('media')->allFiles())->toBe([]);
+})->with([
+    'legacy path key' => [['name' => 'x.txt', 'extension' => 'txt', 'size' => 10, 'path' => '__SECRET__']],
+    'forged original as path' => [['name' => 'x.txt', 'extension' => 'txt', 'size' => 10, '_original' => '__SECRET__']],
+    'no upload at all' => [['name' => 'x.txt', 'extension' => 'txt', 'size' => 10]],
+]);
+
+it('does not write anything when the media list is fed a fabricated file entry', function (): void {
+    $user = NoerdUser::factory()->withExampleTenant()->withSelectedApp('media')->create();
+    $this->actingAs($user);
+
+    $secret = tempnam(sys_get_temp_dir(), 'zzsecret');
+    file_put_contents($secret, 'APP_KEY=base64:do-not-leak');
+
+    $before = MediaModel::count();
+
+    Livewire\Livewire::test('media::media-list')
+        ->set('files', [[
+            'name' => 'passwd.txt',
+            'extension' => 'txt',
+            'size' => 10,
+            'path' => $secret,
+        ]])
+        ->call('store');
+
+    @unlink($secret);
+
+    expect(MediaModel::count())->toBe($before);
+    expect(Storage::disk('media')->allFiles())->toBe([]);
+});

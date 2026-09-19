@@ -37,8 +37,15 @@ return [
         'pdf',
         'txt',
         'webp',
-        'svg',
         'avif',
+        /*
+         * 'svg' is deliberately NOT in this list. An SVG is a script-bearing
+         * document, and the library serves files inline from the application's
+         * own origin — so an uploaded SVG opened by a colleague runs in their
+         * authenticated session. Re-add it only together with a sanitiser or a
+         * separate asset domain. (The core's fallback resolver,
+         * Noerd\Services\NullMediaResolver, refuses it for the same reason.)
+         */
     ],
 
     /*
