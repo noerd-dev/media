@@ -1,52 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Noerd\Media\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use Noerd\Media\Services\AppFolderService;
 use Noerd\Traits\HasModuleInstallation;
-use Noerd\Traits\RequiresNoerdInstallation;
 
-class NoerdMediaInstallCommand extends Command
+class MediaInstallCommand extends Command
 {
     use HasModuleInstallation;
-    use RequiresNoerdInstallation;
 
-    protected $signature = 'noerd:install-media {--force : Overwrite existing files without asking}';
+    protected $signature = 'noerd:install-media
+                            {--force : Overwrite existing files without asking}
+                            {--migrate : Run migrations without asking (required to migrate in non-interactive runs)}
+                            {--build : Run npm build without asking (required to build in non-interactive runs)}';
 
     protected $description = 'Install noerd media content and navigation';
 
     public function handle(): int
     {
-        $this->updateFilesystemsConfig();
-        $this->publishMediaConfig();
-
-        $result = $this->runModuleInstallation();
-
-        if ($result === self::SUCCESS) {
-            $this->ensureAppFolders();
-        }
-
-        return $result;
-    }
-
-    /**
-     * Every tenant gets the folders its apps registered (AppFolderRegistry) —
-     * an existing installation catches up here when a module starts
-     * registering one. The update command does not migrate, so an installation
-     * that has not run the media migrations yet is told instead of failing.
-     */
-    protected function ensureAppFolders(): void
-    {
-        if (! Schema::hasTable('media_folders') || ! Schema::hasColumn('media_folders', 'system_key')) {
-            $this->warn('Run php artisan migrate to create the app folders in the media library.');
-
-            return;
-        }
-
-        app(AppFolderService::class)->ensureForAllTenants();
-        $this->line('<info>Ensured the app folders of every tenant in the media library.</info>');
+        return $this->runModuleInstallation();
     }
 
     protected function getModuleName(): string
@@ -74,33 +50,46 @@ class NoerdMediaInstallCommand extends Command
         return 'media.dashboard';
     }
 
-    protected function getSnippetTitle(): string
-    {
-        return 'Media';
-    }
-
     protected function getSourceDir(): string
     {
         return dirname(__DIR__, 2) . '/app-configs/media';
     }
 
     /**
-     * Publish the media config to the project root so each project can toggle
-     * media.private. An existing config is left untouched to preserve the
-     * project's choice.
+     * Published so each project can toggle media.private and edit the allowed
+     * extensions — an existing file is never touched by an update.
+     *
+     * @return array<int, string>
      */
-    private function publishMediaConfig(): void
+    protected function getConfigFiles(): array
     {
-        $target = base_path('config/media.php');
+        return ['media.php'];
+    }
 
-        if (file_exists($target)) {
-            $this->line('<comment>config/media.php already exists, leaving it untouched.</comment>');
+    /**
+     * The `media` disk in the host's config/filesystems.php.
+     */
+    protected function publishModuleExtras(bool $update): void
+    {
+        $this->updateFilesystemsConfig();
+    }
+
+    /**
+     * Every tenant gets the folders its apps registered (AppFolderRegistry) —
+     * an existing installation catches up here when a module starts
+     * registering one. The update command does not migrate, so an installation
+     * that has not run the media migrations yet is told instead of failing.
+     */
+    protected function ensureModuleSetup(): void
+    {
+        if (! Schema::hasTable('media_folders') || ! Schema::hasColumn('media_folders', 'system_key')) {
+            $this->warn('Run php artisan migrate to create the app folders in the media library.');
 
             return;
         }
 
-        copy(dirname(__DIR__, 2) . '/config/media.php', $target);
-        $this->line('<info>Published config/media.php.</info>');
+        app(AppFolderService::class)->ensureForAllTenants();
+        $this->line('<info>Ensured the app folders of every tenant in the media library.</info>');
     }
 
     /**
@@ -116,7 +105,7 @@ class NoerdMediaInstallCommand extends Command
             return;
         }
 
-        $filesystemsContent = file_get_contents($filesystemsPath);
+        $filesystemsContent = (string) file_get_contents($filesystemsPath);
 
         // Check if media disk is already configured
         if (str_contains($filesystemsContent, "'media' =>")) {

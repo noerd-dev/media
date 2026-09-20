@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Noerd\Media\Commands;
 
-class MediaUpdateCommand extends NoerdMediaInstallCommand
+class MediaUpdateCommand extends MediaInstallCommand
 {
     protected $signature = 'noerd:update-media {--force : Overwrite existing files without asking}';
 
@@ -10,12 +12,6 @@ class MediaUpdateCommand extends NoerdMediaInstallCommand
 
     public function handle(): int
     {
-        $result = $this->runModuleUpdate();
-
-        if ($result === self::SUCCESS) {
-            $this->ensureAppFolders();
-        }
-
-        return $result;
+        return $this->runModuleUpdate();
     }
 }

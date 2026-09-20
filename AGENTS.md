@@ -45,7 +45,7 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 
 - `php artisan noerd:install-media` — first installation (adds the `media` disk to
   `config/filesystems.php`, publishes `config/media.php`, asks for the tenant assignment)
-- `php artisan noerd:update-media` — idempotent YAML update, discovered by `noerd:update-all`
+- `php artisan noerd:update-media` — idempotent YAML update (also adds a missing `media` disk / `config/media.php`, never overwrites the config), discovered by `noerd:update-all`
 - `php artisan media:regenerate-thumbnails [--missing|--all|--id=]` — rebuild thumbnails
 - `php artisan noerd:media-relocate --to=private|public` — move files when toggling `media.private`
 - `php artisan media:restructure [--tenant=] [--dry-run]` — one-time move from the historic flat

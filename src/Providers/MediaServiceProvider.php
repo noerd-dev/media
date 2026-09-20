@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use Noerd\Contracts\MediaResolverContract;
 use Noerd\Events\TenantAppAssigned;
 use Noerd\Media\Commands\MediaClearVariantsCommand;
+use Noerd\Media\Commands\MediaInstallCommand;
 use Noerd\Media\Commands\MediaRelocateCommand;
 use Noerd\Media\Commands\MediaRestructureCommand;
 use Noerd\Media\Commands\MediaSyncCommand;
 use Noerd\Media\Commands\MediaUpdateCommand;
-use Noerd\Media\Commands\NoerdMediaInstallCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
 use Noerd\Media\Listeners\EnsureAppFoldersOnAppAssignment;
 use Noerd\Media\Services\AppFolderAccess;
@@ -28,7 +29,7 @@ class MediaServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(
-            \Noerd\Contracts\MediaResolverContract::class,
+            MediaResolverContract::class,
             MediaResolver::class,
         );
 
@@ -73,7 +74,7 @@ class MediaServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                NoerdMediaInstallCommand::class,
+                MediaInstallCommand::class,
                 MediaUpdateCommand::class,
                 RegenerateThumbnailsCommand::class,
                 MediaRelocateCommand::class,

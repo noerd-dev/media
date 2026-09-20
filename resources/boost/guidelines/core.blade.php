@@ -198,7 +198,9 @@ this module.
 - `php artisan noerd:install-media` — adds the `media` disk to `config/filesystems.php`, publishes
   `config/media.php`, installs the YAML configs, registers the `MEDIA` tenant app, runs migrations
 - `php artisan noerd:update-media` — idempotent update of the YAML configs (picked up by
-  `noerd:update-all`); both commands end with `AppFolderService::ensureForAllTenants()`
+  `noerd:update-all`). Both commands run the same declared steps (`getConfigFiles()`: `media.php`,
+  never overwritten by an update; `publishModuleExtras()`: the `media` disk;
+  `ensureModuleSetup()`: `AppFolderService::ensureForAllTenants()`)
 - `php artisan media:regenerate-thumbnails {--missing} {--all} {--id=}` — regenerates thumbnails
   through `ImagePreviewService::regenerateThumbnail()` (console-safe: uses `$media->tenant_id`)
 - `php artisan noerd:media-relocate {--to=private|public}` — moves the files between the public
@@ -243,7 +245,7 @@ this module.
   permission-scoped folders (a consuming registration lives in the accounting provider)
 - `src/Services/PdfThumbnailGenerator.php` + `tests/Support/FakeGhostscript.php` — an optional
   external binary with graceful degradation and a test double
-- `src/Commands/NoerdMediaInstallCommand.php` — an install command that also patches host config
+- `src/Commands/MediaInstallCommand.php` — an install command that also patches host config
   (`filesystems.php`) and publishes its own config idempotently
 - `src/Http/Controllers/MediaFileController.php` + `tests/Feature/MediaFileRouteTest.php` —
   tenant-checked file streaming
