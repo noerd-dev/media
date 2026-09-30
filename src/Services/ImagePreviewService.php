@@ -79,8 +79,13 @@ class ImagePreviewService
         return $thumbPath;
     }
 
-    public function createPreviewForFile(array $file, string $destinationPath): ?string
+    /**
+     * The tenant decides the thumbnail directory. Headless callers (an import
+     * command) pass it; a request falls back to the acting user's tenant.
+     */
+    public function createPreviewForFile(array $file, string $destinationPath, ?int $tenantId = null): ?string
     {
+        $tenantId ??= (int) Auth::user()->selected_tenant_id;
         $manager = new ImageManager(new Driver());
         $disk = config('media.disk');
         $path = Storage::disk($disk)->path($destinationPath);
@@ -98,17 +103,17 @@ class ImagePreviewService
             $thumbnail = $image->resize($newWidth, $newHeight);
 
             $randomName = Str::random();
-            $thumbPath = $this->paths->thumbnailDirectory((int) Auth::user()->selected_tenant_id) . '/thumb_' . $randomName . '.jpg';
+            $thumbPath = $this->paths->thumbnailDirectory($tenantId) . '/thumb_' . $randomName . '.jpg';
             Storage::disk($disk)->put($thumbPath, (string) $thumbnail->toJpeg());
         }
 
         if ($extension === 'pdf') {
             $randomName = Str::random();
             // Store PDF previews alongside image thumbnails for consistency
-            $thumbPath = $this->paths->thumbnailDirectory((int) Auth::user()->selected_tenant_id) . '/pdf_' . $randomName . '.jpg';
+            $thumbPath = $this->paths->thumbnailDirectory($tenantId) . '/pdf_' . $randomName . '.jpg';
             $fullPreviewPath = Storage::disk($disk)->path($thumbPath);
 
-            Storage::disk($disk)->makeDirectory($this->paths->thumbnailDirectory((int) Auth::user()->selected_tenant_id));
+            Storage::disk($disk)->makeDirectory($this->paths->thumbnailDirectory($tenantId));
 
             if (! $this->generatePdfThumbnail($path, $fullPreviewPath)) {
                 $thumbPath = null;

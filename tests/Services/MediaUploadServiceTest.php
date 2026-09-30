@@ -111,14 +111,14 @@ it('refuses a fabricated payload that names a file on the server', function (arr
     file_put_contents($secret, 'APP_KEY=base64:do-not-leak');
 
     $payload = array_map(
-        fn ($value): mixed => $value === '__SECRET__' ? $secret : $value,
+        fn($value): mixed => $value === '__SECRET__' ? $secret : $value,
         $payload,
     );
 
     $before = MediaModel::count();
 
     try {
-        expect(fn () => app(MediaUploadService::class)->storeFromArray($payload))
+        expect(fn() => app(MediaUploadService::class)->storeFromArray($payload))
             ->toThrow(InvalidArgumentException::class);
     } finally {
         @unlink($secret);
@@ -154,4 +154,32 @@ it('does not write anything when the media list is fed a fabricated file entry',
 
     expect(MediaModel::count())->toBe($before);
     expect(Storage::disk('media')->allFiles())->toBe([]);
+});
+
+// An import command runs without a signed-in user: the tenant is passed
+// explicitly and decides the directory, the row, the thumbnail and which
+// folders may be targeted.
+it('stores a file for an explicit tenant without a signed-in user', function (): void {
+    $user = NoerdUser::factory()->withExampleTenant()->create();
+    $tenantId = (int) $user->selected_tenant_id;
+    $folder = Noerd\Media\Models\MediaFolder::withoutGlobalScopes()->create([
+        'tenant_id' => $tenantId,
+        'name' => 'Zz Import',
+    ]);
+
+    $source = UploadedFile::fake()->image('zz-import.jpg', 800, 600);
+
+    $media = app(MediaUploadService::class)->storeFromPath(
+        $source->getRealPath(),
+        $folder->id,
+        'zz-import.jpg',
+        $tenantId,
+    );
+
+    expect($media->tenant_id)->toBe($tenantId)
+        ->and($media->folder_id)->toBe($folder->id)
+        ->and($media->path)->toStartWith($tenantId . '/')
+        ->and($media->thumbnail)->toStartWith($tenantId . '/');
+
+    expect(Storage::disk('media')->exists($media->path))->toBeTrue();
 });

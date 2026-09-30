@@ -129,8 +129,9 @@ this module.
   the project's published `config/media.php` — never widen the list in module code
 - Programmatic storing goes through `MediaUploadService` (`storeFromArray()` for dropzone-style
   arrays, `storeFromUploadedFile()` for `UploadedFile`s) which writes the file, generates the
-  preview through `ImagePreviewService` and creates the `Media` row; both read the tenant from
-  `Auth::user()->selected_tenant_id`. Filenames are ASCII-sanitised (`Str::ascii(…, 'de')`)
+  preview through `ImagePreviewService` and creates the `Media` row; the tenant is the acting
+  user's `selected_tenant_id` unless the caller passes `tenantId:` — headless imports (commands,
+  jobs) always pass it, together with `storeFromPath()` for trusted local files. Filenames are ASCII-sanitised (`Str::ascii(…, 'de')`)
 - PDF thumbnails are rasterised by `PdfThumbnailGenerator`: Ghostscript (`gs`, auto-detected on
   `$PATH` plus Homebrew paths, or `config('media.ghostscript_binary')` / `MEDIA_GHOSTSCRIPT_BINARY`)
   first, the legacy `imagick` extension only as fallback. Neither is required — without a renderer

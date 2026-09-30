@@ -32,7 +32,7 @@ class MediaUploadService
      *
      * @throws InvalidArgumentException when the entry describes no live upload
      */
-    public function storeFromArray(array $file, ?int $folderId = null): Media
+    public function storeFromArray(array $file, ?int $folderId = null, ?int $tenantId = null): Media
     {
         $upload = DropzoneFile::resolve($file);
 
@@ -40,7 +40,7 @@ class MediaUploadService
             throw new InvalidArgumentException('The upload could not be resolved.');
         }
 
-        return $this->storeFromUploadedFile($upload, $folderId);
+        return $this->storeFromUploadedFile($upload, $folderId, $tenantId);
     }
 
     /**
@@ -55,7 +55,7 @@ class MediaUploadService
      *
      * @throws InvalidArgumentException when the path is not a readable file
      */
-    public function storeFromPath(string $path, ?int $folderId = null, ?string $name = null): Media
+    public function storeFromPath(string $path, ?int $folderId = null, ?string $name = null, ?int $tenantId = null): Media
     {
         if (! is_file($path) || ! is_readable($path)) {
             throw new InvalidArgumentException('The file could not be read: ' . $path);
@@ -64,13 +64,18 @@ class MediaUploadService
         return $this->storeFromUploadedFile(
             new UploadedFile($path, $name ?? basename($path), null, null, true),
             $folderId,
+            $tenantId,
         );
     }
 
-    public function storeFromUploadedFile($uploadedFile, ?int $folderId = null): Media
+    /**
+     * The tenant defaults to the acting user's selected tenant; a headless
+     * caller (console import, job) passes it explicitly.
+     */
+    public function storeFromUploadedFile($uploadedFile, ?int $folderId = null, ?int $tenantId = null): Media
     {
-        $tenantId = (int) Auth::user()->selected_tenant_id;
-        $folder = $this->resolveFolder($folderId);
+        $tenantId ??= (int) Auth::user()->selected_tenant_id;
+        $folder = $this->resolveFolder($folderId, $tenantId);
         // The row must name the folder the bytes actually went into: a folder
         // id that did not resolve (unknown, or another tenant's) writes to the
         // library root, so the record has to say root as well.
@@ -94,7 +99,7 @@ class MediaUploadService
             'extension' => $extension,
             'size' => $size,
         ];
-        $previewPath = $this->imagePreviewService->createPreviewForFile($fileMeta, $destinationPath);
+        $previewPath = $this->imagePreviewService->createPreviewForFile($fileMeta, $destinationPath, $tenantId);
 
         return Media::create([
             'tenant_id' => $tenantId,
@@ -127,14 +132,14 @@ class MediaUploadService
      * without the tenant condition a rewritten id would write another tenant's
      * directory tree. Unknown or foreign ids fall back to the library root.
      */
-    private function resolveFolder(?int $folderId): ?MediaFolder
+    private function resolveFolder(?int $folderId, int $tenantId): ?MediaFolder
     {
         if ($folderId === null) {
             return null;
         }
 
         return MediaFolder::withoutGlobalScopes()
-            ->where('tenant_id', (int) Auth::user()->selected_tenant_id)
+            ->where('tenant_id', $tenantId)
             ->find($folderId);
     }
 }
