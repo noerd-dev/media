@@ -80,7 +80,7 @@ it('carries every file below a renamed folder along', function (): void {
 
 it('deletes the generated thumbnail along with the file', function (): void {
     $media = zzStoredMedia($this->tenantId, null, 'photo.jpg');
-    $thumbnail = "{$this->tenantId}/.thumbnails/thumb_photo.jpg";
+    $thumbnail = "{$this->tenantId}/_thumbnails/thumb_photo.jpg";
     Storage::disk('media')->put($thumbnail, 'THUMB');
     $media->forceFill(['thumbnail' => $thumbnail])->save();
 
@@ -124,16 +124,16 @@ it('creates the directory of an empty folder', function (): void {
 });
 
 it('leaves the generated directories alone when pruning', function (): void {
-    Storage::disk('media')->makeDirectory("{$this->tenantId}/.thumbnails");
-    Storage::disk('media')->makeDirectory("{$this->tenantId}/.variants/web");
+    Storage::disk('media')->makeDirectory("{$this->tenantId}/_thumbnails");
+    Storage::disk('media')->makeDirectory("{$this->tenantId}/_variants/web");
     Storage::disk('media')->makeDirectory("{$this->tenantId}/Leer");
 
     $this->mover->pruneEmptyDirectories($this->tenantId);
 
     $directories = Storage::disk('media')->directories((string) $this->tenantId);
 
-    expect($directories)->toContain("{$this->tenantId}/.thumbnails")
-        ->and($directories)->toContain("{$this->tenantId}/.variants")
+    expect($directories)->toContain("{$this->tenantId}/_thumbnails")
+        ->and($directories)->toContain("{$this->tenantId}/_variants")
         ->and($directories)->not->toContain("{$this->tenantId}/Leer");
 });
 

@@ -104,8 +104,8 @@ class MediaRestructureCommand extends Command
     }
 
     /**
-     * Thumbnails move from the visible `thumbnails/` directory into the hidden
-     * `.thumbnails/`, so the reconciler never mistakes generated previews for
+     * Thumbnails move from the legacy `thumbnails/` directory into the reserved
+     * `_thumbnails/`, so the reconciler never mistakes generated previews for
      * user content.
      */
     private function relocateThumbnails(int $tenantId, MediaPathService $paths, bool $dryRun): int

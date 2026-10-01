@@ -146,7 +146,7 @@ class MediaMover
 
     /**
      * Drop directories that hold neither files nor sub-directories any more,
-     * deepest first. The tenant root and the hidden generated directories stay.
+     * deepest first. The tenant root and the reserved generated directories stay.
      */
     public function pruneEmptyDirectories(int $tenantId): void
     {

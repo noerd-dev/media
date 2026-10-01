@@ -77,8 +77,8 @@ $url = app(\Noerd\Contracts\MediaResolverContract::class)->getImageUrl($mediaId,
 ```
 
 The URL points at the signed route `/media/image/{id}/{variant}`. On its first request the image is
-scaled down to the configured width (never upscaled), encoded as WebP and cached in the hidden
-`{tenant}/.variants` directory; afterwards it is only streamed, with an `immutable` cache header.
+scaled down to the configured width (never upscaled), encoded as WebP and cached in the reserved
+`{tenant}/_variants` directory; afterwards it is only streamed, with an `immutable` cache header.
 The route needs no login — the signature is the authorization, so no media id can be guessed — and
 also works while `media.private` is on. SVG, GIF, AVIF and PDF files are delivered as they are.
 

@@ -84,8 +84,8 @@ return [
     | Size-limited variants for DELIVERING an image to visitors (public
     | website, e-mail), name => maximum width in pixels. The original stays
     | untouched; a variant is generated on its first request, never upscaled,
-    | encoded as WebP (JPEG/PNG when GD lacks WebP) and cached in the hidden
-    | {tenant}/.variants directory. "web" is what MediaResolverContract::
+    | encoded as WebP (JPEG/PNG when GD lacks WebP) and cached in the reserved
+    | {tenant}/_variants directory. "web" is what MediaResolverContract::
     | getImageUrl() delivers by default. After changing a width run
     | "php artisan media:clear-variants" to drop the stale files.
     |

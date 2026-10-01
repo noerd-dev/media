@@ -77,8 +77,8 @@ it('moves thumbnails into the hidden directory', function (): void {
 
     $this->artisan('media:restructure', ['--tenant' => $this->tenantId])->assertSuccessful();
 
-    expect($media->fresh()->thumbnail)->toBe("{$this->tenantId}/.thumbnails/thumb_photo.jpg");
-    Storage::disk('media')->assertExists("{$this->tenantId}/.thumbnails/thumb_photo.jpg");
+    expect($media->fresh()->thumbnail)->toBe("{$this->tenantId}/_thumbnails/thumb_photo.jpg");
+    Storage::disk('media')->assertExists("{$this->tenantId}/_thumbnails/thumb_photo.jpg");
     Storage::disk('media')->assertMissing($legacy);
 });
 

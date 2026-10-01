@@ -35,9 +35,14 @@ this module.
   `{tenant_id}/{folder segments}/{name}`: the storage root carries the SAME tree as the library, so
   it can be browsed, backed up and filled by hand. `medias.name` IS the basename on disk; a name
   the target directory already holds is numbered (`beleg-2.pdf`). Thumbnails stay flat in the
-  hidden `{tenant_id}/.thumbnails/` as `thumb_*.jpg` (images, 500px wide via Intervention Image GD)
-  or `pdf_*.jpg` (PDF page 1), the delivery variants in `{tenant_id}/.variants/{variant}/` as
-  `{mediaId}_{width}.webp` — both are generated data, and the reconciler skips dot directories
+  reserved `{tenant_id}/_thumbnails/` as `thumb_*.jpg` (images, 500px wide via Intervention Image GD)
+  or `pdf_*.jpg` (PDF page 1), the delivery variants in `{tenant_id}/_variants/{variant}/` as
+  `{mediaId}_{width}.webp` — both are generated data the reconciler skips, and a root folder
+  never takes either name (`uniqueSegment()` numbers it). NEVER put them back into a dot
+  directory: public mode serves thumbnails through the `/storage` symlink, and the stock nginx
+  of Forge denies every dot path (`location ~ /\.(?!well-known)`) — the library shows broken
+  images in production only. `move_generated_media_directories` moved the old `.thumbnails` /
+  `.variants` trees and rewrote `medias.thumbnail`
 - Names stay READABLE: only what breaks a path is stripped (separators, control characters,
   wildcards, a leading dot) — umlauts and other UTF-8 characters survive, in folder names and file
   names alike. A transliterated `Vertraege` next to a hand-made `Verträge` directory would be two

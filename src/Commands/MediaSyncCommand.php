@@ -220,6 +220,10 @@ class MediaSyncCommand extends Command
         $relative = mb_substr($directory, mb_strlen((string) $tenantId) + 1);
         $segments = explode('/', $relative);
 
+        if (app(MediaPathService::class)->isReservedDirectory($segments[0])) {
+            return null;
+        }
+
         foreach ($segments as $segment) {
             if (str_starts_with($segment, '.')) {
                 return null;

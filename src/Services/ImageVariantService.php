@@ -14,7 +14,7 @@ use Throwable;
  * The original is stored untouched — a receipt photo or an archive scan must
  * keep every pixel — but a visitor of a public page should never download it
  * in full. A variant is generated on its first request, never upscaled, and
- * cached in the hidden `{tenant_id}/.variants/{variant}` directory; from then
+ * cached in the reserved `{tenant_id}/_variants/{variant}` directory; from then
  * on it is only streamed.
  *
  * The variant names and their maximum widths are configuration

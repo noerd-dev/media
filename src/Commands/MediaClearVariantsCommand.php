@@ -15,7 +15,7 @@ use Noerd\Models\Tenant;
  * after changing a width in `media.variants`, whose old files would otherwise
  * stay behind.
  *
- * Only the hidden variant directory of an existing tenant is touched.
+ * Only the reserved variant directory of an existing tenant is touched.
  */
 class MediaClearVariantsCommand extends Command
 {

@@ -86,9 +86,27 @@ it('ignores the record itself when checking for a name clash', function (): void
 });
 
 it('keeps generated thumbnails out of the mirrored tree', function (): void {
-    expect($this->paths->thumbnailDirectory($this->tenantId))->toBe("{$this->tenantId}/.thumbnails")
-        ->and($this->paths->isReservedDirectory('.thumbnails'))->toBeTrue()
+    expect($this->paths->thumbnailDirectory($this->tenantId))->toBe("{$this->tenantId}/_thumbnails")
+        ->and($this->paths->isReservedDirectory('_thumbnails'))->toBeTrue()
+        ->and($this->paths->isReservedDirectory('_variants'))->toBeTrue()
+        ->and($this->paths->isReservedDirectory('.hidden'))->toBeTrue()
         ->and($this->paths->isReservedDirectory('Rechnungen'))->toBeFalse();
+});
+
+it('never generates a dot directory, which a stock nginx refuses to serve', function (): void {
+    expect($this->paths->thumbnailDirectory($this->tenantId))->not->toContain('/.')
+        ->and($this->paths->variantDirectory($this->tenantId))->not->toContain('/.');
+});
+
+it('numbers a root folder that would take a reserved directory name', function (): void {
+    expect($this->paths->uniqueSegment($this->tenantId, null, '_thumbnails'))->toBe('_thumbnails-2')
+        ->and($this->paths->uniqueSegment($this->tenantId, null, '_variants'))->toBe('_variants-2');
+});
+
+it('treats only the reserved directories themselves as generated paths', function (): void {
+    expect($this->paths->isGeneratedPath($this->tenantId, "{$this->tenantId}/_thumbnails"))->toBeTrue()
+        ->and($this->paths->isGeneratedPath($this->tenantId, "{$this->tenantId}/_variants/web/1_600.webp"))->toBeTrue()
+        ->and($this->paths->isGeneratedPath($this->tenantId, "{$this->tenantId}/_thumbnails-2"))->toBeFalse();
 });
 
 it('keeps a segment the caller set explicitly', function (): void {

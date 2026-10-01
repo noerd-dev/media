@@ -11,22 +11,28 @@ use Noerd\Media\Models\MediaFolder;
  *
  * The disk mirrors the library: a file lives at
  * `{tenant_id}/{folder segments}/{name}`, so the storage root can be browsed,
- * backed up and filled by hand. Generated thumbnails stay flat in a hidden
- * `{tenant_id}/.thumbnails` directory, the size-limited delivery variants in
- * `{tenant_id}/.variants/{variant}` — they are derived data, not content, and
- * the reconciler skips dot directories.
+ * backed up and filled by hand. Generated thumbnails stay flat in a reserved
+ * `{tenant_id}/_thumbnails` directory, the size-limited delivery variants in
+ * `{tenant_id}/_variants/{variant}` — they are derived data, not content, and
+ * the reconciler skips them.
+ *
+ * The reserved directories are deliberately NOT dot directories: in public
+ * mode the thumbnails are served straight from the /storage symlink, and the
+ * stock nginx configuration of Forge (and most hosts) denies every path with a
+ * dot segment (`location ~ /\.(?!well-known)`), so a `.thumbnails` URL answers
+ * 403 in production while it works locally.
  */
 class MediaPathService
 {
     /**
-     * The hidden per-tenant directory holding generated thumbnails.
+     * The reserved per-tenant directory holding generated thumbnails.
      */
-    public const THUMBNAIL_DIR = '.thumbnails';
+    public const THUMBNAIL_DIR = '_thumbnails';
 
     /**
-     * The hidden per-tenant directory holding the generated delivery variants.
+     * The reserved per-tenant directory holding the generated delivery variants.
      */
-    public const VARIANT_DIR = '.variants';
+    public const VARIANT_DIR = '_variants';
 
     /**
      * Longest folder or file segment written to disk.
@@ -65,7 +71,10 @@ class MediaPathService
         $candidate = $base;
         $suffix = 1;
 
-        while ($this->segmentTaken($tenantId, $parentId, $candidate, $ignoreFolderId)) {
+        while (
+            ($parentId === null && $this->isReservedDirectory($candidate))
+            || $this->segmentTaken($tenantId, $parentId, $candidate, $ignoreFolderId)
+        ) {
             $suffix++;
             $candidate = $base . '-' . $suffix;
         }
@@ -181,7 +190,7 @@ class MediaPathService
     }
 
     /**
-     * The hidden thumbnail directory of a tenant.
+     * The reserved thumbnail directory of a tenant.
      */
     public function thumbnailDirectory(int $tenantId): string
     {
@@ -189,7 +198,7 @@ class MediaPathService
     }
 
     /**
-     * The hidden directory holding a tenant's generated delivery variants.
+     * The reserved directory holding a tenant's generated delivery variants.
      */
     public function variantDirectory(int $tenantId): string
     {
@@ -213,16 +222,23 @@ class MediaPathService
      */
     public function isGeneratedPath(int $tenantId, string $path): bool
     {
-        return str_starts_with($path, $this->thumbnailDirectory($tenantId))
-            || str_starts_with($path, $this->variantDirectory($tenantId));
+        foreach ([$this->thumbnailDirectory($tenantId), $this->variantDirectory($tenantId)] as $directory) {
+            if ($path === $directory || str_starts_with($path, $directory . '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * Whether a directory name is a generated one the reconciler must ignore.
+     * Whether a directory name directly below the tenant root is one the
+     * library does not own: a generated directory, or any dot directory.
      */
     public function isReservedDirectory(string $name): bool
     {
-        return str_starts_with($name, '.');
+        return str_starts_with($name, '.')
+            || in_array($name, [self::THUMBNAIL_DIR, self::VARIANT_DIR], true);
     }
 
     /**

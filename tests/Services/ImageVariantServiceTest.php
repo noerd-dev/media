@@ -24,7 +24,7 @@ it('scales an oversized image down to the configured width', function (): void {
 
     $path = $this->variants->pathFor($media, 'web');
 
-    expect($path)->toStartWith("{$this->tenantId}/.variants/web/{$media->id}_600.");
+    expect($path)->toStartWith("{$this->tenantId}/_variants/web/{$media->id}_600.");
 
     [$width, $height] = getimagesizefromstring(Storage::disk('media')->get($path));
 
@@ -91,7 +91,7 @@ it('answers null instead of decoding an image above the pixel budget', function 
     $media = $this->zzStoredImage($this->tenantId, 'huge.jpg', 1600, 800);
 
     expect($this->variants->pathFor($media, 'web'))->toBeNull()
-        ->and(Storage::disk('media')->allFiles("{$this->tenantId}/.variants"))->toBe([]);
+        ->and(Storage::disk('media')->allFiles("{$this->tenantId}/_variants"))->toBe([]);
 });
 
 it('answers null for a missing or unreadable source', function (): void {

@@ -77,6 +77,16 @@ it('skips a file whose extension is not allowed', function (): void {
 });
 
 it('ignores the generated thumbnail directory', function (): void {
+    Storage::disk('media')->put("{$this->tenantId}/_thumbnails/thumb_x.jpg", 'THUMB');
+
+    $this->artisan('media:sync', ['--tenant' => $this->tenantId])->assertSuccessful();
+
+    expect(Media::withoutGlobalScopes()->count())->toBe(0)
+        ->and(MediaFolder::withoutGlobalScopes()->count())->toBe(0);
+});
+
+it('ignores the generated variant directory and leftover dot directories', function (): void {
+    Storage::disk('media')->put("{$this->tenantId}/_variants/web/1_600.webp", 'VARIANT');
     Storage::disk('media')->put("{$this->tenantId}/.thumbnails/thumb_x.jpg", 'THUMB');
 
     $this->artisan('media:sync', ['--tenant' => $this->tenantId])->assertSuccessful();
