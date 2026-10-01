@@ -114,9 +114,10 @@ class MediaInstallCommand extends Command
             return;
         }
 
-        // Find the position to insert the media disk configuration
-        // Look for the closing of the 'disks' array
-        $pattern = '/(\s+)(],\s*\/\*[\s\S]*?Symbolic Links[\s\S]*?\*\/)/';
+        // Insert right after the opening of the 'disks' array: its closing
+        // bracket cannot be found reliably, a comment after any disk would
+        // place the media disk inside that disk.
+        $pattern = "/('disks'\\s*=>\\s*\\[[^\\S\\n]*\\n)/";
 
         $mediaDiskConfig = "
         'media' => [
@@ -128,8 +129,7 @@ class MediaInstallCommand extends Command
         ],
 ";
 
-        $replacement = $mediaDiskConfig . '$1$2';
-        $updatedContent = preg_replace($pattern, $replacement, $filesystemsContent);
+        $updatedContent = preg_replace($pattern, '$1' . $mediaDiskConfig, $filesystemsContent, 1);
 
         if ($updatedContent && $updatedContent !== $filesystemsContent) {
             file_put_contents($filesystemsPath, $updatedContent);
