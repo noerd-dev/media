@@ -357,3 +357,31 @@ it('counts the search hits across folders while a filter is active', function ()
 
     expect($component->viewData('totalCount'))->toBe(2);
 });
+
+
+it('offers and hands out only images when the picker asks for an image', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+    $image = Media::factory()->file($tenantId, 'pizza.JPG')->create();
+    $pdf = Media::factory()->file($tenantId, 'menu.pdf')->create();
+
+    $picker = Livewire::test('media::media-list', [
+        'selectMode' => true,
+        'selectContext' => 'productFile:image',
+        'selectToken' => 'token',
+        'selectKind' => 'image',
+    ]);
+
+    expect($picker->viewData('listConfig')['rows']->pluck('id')->all())->toBe([$image->id]);
+
+    $picker->call('chooseMedia', $pdf->id)->assertNotDispatched('mediaSelected');
+    $picker->call('chooseMedia', $image->id)->assertDispatched('mediaSelected', $image->id, 'productFile:image', 'token');
+});
+
+it('offers every file when the picker asks for no kind', function (): void {
+    $tenantId = $this->user->selected_tenant_id;
+    $pdf = Media::factory()->file($tenantId, 'menu.pdf')->create();
+
+    Livewire::test('media::media-list', ['selectMode' => true, 'selectContext' => 'productFile:attachment', 'selectToken' => 'token'])
+        ->call('chooseMedia', $pdf->id)
+        ->assertDispatched('mediaSelected', $pdf->id, 'productFile:attachment', 'token');
+});

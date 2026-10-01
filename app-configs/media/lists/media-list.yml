@@ -1,7 +1,4 @@
 title: Media
-actions:
-  - label: New Media File
-    action: listAction
 disableSearch: false
 columns:
   - field: filename

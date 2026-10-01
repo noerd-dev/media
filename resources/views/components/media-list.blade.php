@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -18,8 +19,6 @@ use Noerd\Traits\NoerdList;
 new class extends Component {
     use NoerdList;
 
-    public $detailComponent = 'media::media-detail';
-
     public array $files = [];
     public ?Media $selected = null;
     public array $filterTagIds = [];
@@ -27,6 +26,10 @@ new class extends Component {
     public bool $selectMode = false;
     public ?string $selectContext = null;
     public ?string $selectToken = null;
+
+    /** `image` narrows the picker to images — a PDF is no product photo. */
+    #[Locked]
+    public ?string $selectKind = null;
     public array $selectedMediaIds = [];
 
     /** Why the last deletion was refused — a module still needs the file. */
@@ -80,6 +83,7 @@ new class extends Component {
                 }
             })
             ->tap(fn($query) => $this->applyListFilters($query))
+            ->when($this->picksImagesOnly(), fn($query) => $query->images())
             // Folder context only applies when no search/filter is active (global search per UX choice)
             ->when(! $hasActiveFilters, fn($query) => $query->where('folder_id', $this->currentFolderId));
 
@@ -142,21 +146,10 @@ new class extends Component {
         $this->store();
     }
 
-    public function rendering(): void
-    {
-        if ((int) request()->id) {
-            $this->listAction(request()->id);
-        }
-
-        if (request()->create) {
-            $this->listAction();
-        }
-    }
-
     public function store(): void
     {
         // An upload creates a Media record, so it needs the create ability —
-        // this action is reachable without the "New" button that hides itself.
+        // the dropzone is the only way to add media, and the action is callable directly.
         abort_unless(AccessHelper::canCreateObject(Media::class), 403);
 
         // The client can rewrite the whole $files array, so the target folder
@@ -284,11 +277,25 @@ new class extends Component {
         $this->selected = null;
     }
 
+    private function picksImagesOnly(): bool
+    {
+        return $this->selectMode && $this->selectKind === 'image';
+    }
+
     public function chooseMedia(int $id): void
     {
         if (! $this->selectMode) {
             return;
         }
+
+        if ($this->picksImagesOnly()) {
+            $media = Media::where('tenant_id', Auth::user()->selected_tenant_id)->find($id);
+
+            if (! $media?->isImage()) {
+                return;
+            }
+        }
+
         $this->dispatch('mediaSelected', $id, $this->selectContext, $this->selectToken);
         $this->dispatch('closeTopModal');
     }

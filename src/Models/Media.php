@@ -2,10 +2,12 @@
 
 namespace Noerd\Media\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Noerd\Media\Database\Factories\MediaFactory;
@@ -25,7 +27,7 @@ class Media extends Model
      * Extensions a browser can render directly in an <img> tag. Used as the
      * fallback when no generated thumbnail exists.
      */
-    private const INLINE_RENDERABLE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'avif', 'gif'];
+    public const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'avif', 'gif'];
 
     protected $guarded = [];
 
@@ -110,7 +112,24 @@ class Media extends Model
             return true;
         }
 
-        return in_array($this->normalizedExtension(), self::INLINE_RENDERABLE_EXTENSIONS, true);
+        return in_array($this->normalizedExtension(), self::IMAGE_EXTENSIONS, true);
+    }
+
+    /**
+     * Whether the file is an image a browser can show — what a picker asking
+     * for an image (product photo, shop header, logo) may hand out.
+     */
+    public function isImage(): bool
+    {
+        return in_array($this->normalizedExtension(), self::IMAGE_EXTENSIONS, true);
+    }
+
+    /**
+     * Only images (see isImage()).
+     */
+    public function scopeImages(Builder $query): Builder
+    {
+        return $query->whereIn(DB::raw('LOWER(extension)'), self::IMAGE_EXTENSIONS);
     }
 
     /**
