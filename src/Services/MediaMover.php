@@ -40,8 +40,7 @@ class MediaMover
     }
 
     /**
-     * Where a file would end up, without touching anything — the dry run of
-     * the restructure command reports from this.
+     * Where a file would end up, without touching anything.
      *
      * @return array{name: string, path: string}
      */

@@ -27,8 +27,7 @@ this module.
   folder names through it, never `$folder->name`). `path_segment` is the folder's DIRECTORY name,
   derived from `name` by the model's `saving` hook and unique per tenant and parent — never write
   it by hand and never build a directory name from `name` or `label()` (a label is translated)
-- `MediaTag` (table `media_tags`, NOT tenant scoped) — pivot `media_tag_media`; the tables were
-  renamed from `media_labels` by the `rename_media_labels_to_tags` migration
+- `MediaTag` (table `media_tags`, NOT tenant scoped) — pivot `media_tag_media`
 ### The disk mirrors the library — read this before touching a path
 
 - Files live on the dedicated `media` disk (`config('media.disk')`, env `MEDIA_DISK`) at
@@ -41,8 +40,7 @@ this module.
   never takes either name (`uniqueSegment()` numbers it). NEVER put them back into a dot
   directory: public mode serves thumbnails through the `/storage` symlink, and the stock nginx
   of Forge denies every dot path (`location ~ /\.(?!well-known)`) — the library shows broken
-  images in production only. `move_generated_media_directories` moved the old `.thumbnails` /
-  `.variants` trees and rewrote `medias.thumbnail`
+  images in production only
 - Names stay READABLE: only what breaks a path is stripped (separators, control characters,
   wildcards, a leading dot) — umlauts and other UTF-8 characters survive, in folder names and file
   names alike. A transliterated `Vertraege` next to a hand-made `Verträge` directory would be two
@@ -211,10 +209,6 @@ this module.
   through `ImagePreviewService::regenerateThumbnail()` (console-safe: uses `$media->tenant_id`)
 - `php artisan noerd:media-relocate {--to=private|public}` — moves the files between the public
   and the private storage root when toggling `media.private`
-- `php artisan media:restructure {--tenant=} {--dry-run}` — the ONE-TIME move of an installation
-  from the historic flat layout into the folder-mirroring one, thumbnails included. Run it after
-  `migrate`, and after the CMS/core migrations that turn stored media URLs into ids — those map the
-  URLs back through the still-flat `medias.path`
 - `php artisan media:sync {--tenant=} {--prune} {--dry-run}` — reconciles library and disk in both
   directions: unknown directories become folders, unknown files become media (thumbnail included),
   and media rows without a file are reported. `--prune` deletes those rows THROUGH the model, so

@@ -11,7 +11,6 @@ use Noerd\Events\TenantAppAssigned;
 use Noerd\Media\Commands\MediaClearVariantsCommand;
 use Noerd\Media\Commands\MediaInstallCommand;
 use Noerd\Media\Commands\MediaRelocateCommand;
-use Noerd\Media\Commands\MediaRestructureCommand;
 use Noerd\Media\Commands\MediaSyncCommand;
 use Noerd\Media\Commands\MediaUpdateCommand;
 use Noerd\Media\Commands\RegenerateThumbnailsCommand;
@@ -78,7 +77,6 @@ class MediaServiceProvider extends ServiceProvider
                 MediaUpdateCommand::class,
                 RegenerateThumbnailsCommand::class,
                 MediaRelocateCommand::class,
-                MediaRestructureCommand::class,
                 MediaSyncCommand::class,
                 MediaClearVariantsCommand::class,
             ]);
