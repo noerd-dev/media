@@ -16,7 +16,6 @@ use Noerd\Media\Scopes\AppFolderVisibilityScope;
 use Noerd\Media\Services\ImageVariantService;
 use Noerd\Media\Services\MediaUsageRegistry;
 use Noerd\Traits\BelongsToTenant;
-use Noerd\Uki\Models\TextDocument;
 
 class Media extends Model
 {
@@ -32,11 +31,6 @@ class Media extends Model
     protected $guarded = [];
 
     protected $table = 'medias';
-
-    public function aiDocument()
-    {
-        return $this->hasOne(TextDocument::class);
-    }
 
     public function tags(): BelongsToMany
     {
