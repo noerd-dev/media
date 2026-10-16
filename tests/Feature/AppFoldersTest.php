@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Noerd\Events\TenantAppAssigned;
@@ -73,6 +74,16 @@ describe('creating app folders', function (): void {
         TenantAppAssigned::dispatch($tenant->id, 'ZZ-FOLDER-APP');
 
         expect($this->zzSystemFolder($tenant->id))->not->toBeNull();
+    });
+
+    it('skips the assignment while the folder table is not migrated yet', function (): void {
+        $tenant = Tenant::factory()->create();
+        Schema::shouldReceive('hasTable')->with('media_folders')->andReturnFalse();
+
+        TenantAppAssigned::dispatch($tenant->id, 'ZZ-FOLDER-APP');
+
+        Schema::clearResolvedInstances();
+        expect($this->zzSystemFolder($tenant->id))->toBeNull();
     });
 
     it('catches up every tenant holding the app', function (): void {
