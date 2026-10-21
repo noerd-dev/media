@@ -9,7 +9,7 @@ by `php artisan boost:update` (add `noerd/media` to the `packages` array in `boo
 ## What this module is
 
 A multi-tenant media library on the noerd framework: uploads through the core dropzone, folders,
-tags, generated thumbnails for images (Intervention Image) and PDFs (Ghostscript, optional), an
+tags, generated thumbnails for images (Intervention Image) and PDFs (Ghostscript or Poppler `pdftoppm`, optional), an
 optional private mode that streams files through authenticated routes, and two seams other modules
 build on without depending on Media directly — the core `MediaResolverContract` (preview URLs,
 picker, storing uploads), the `MediaUsageRegistry` (a module says why a file must not be
@@ -55,7 +55,7 @@ visible only to users who may use that app). Tables: `medias`, `media_folders`, 
 
 - Tests bind the host `Tests\TestCase`: `php artisan test --compact app-modules/media/tests`
   (Pest; tests prove mechanics, never the current YAML configuration). Always `Storage::fake('media')`;
-  fake Ghostscript with `tests/Support/FakeGhostscript` instead of requiring a renderer on the host
+  fake Ghostscript with `tests/Support/FakeGhostscript` (Poppler: `FakePdftoppm`) instead of requiring a renderer on the host
 - `Noerd\Media\Tests\` stays in the production `autoload` of `composer.json`: a path-repository's
   `autoload-dev` is not loaded by the host
 - Format from the host project root with an explicit path: `vendor/bin/pint app-modules/media`

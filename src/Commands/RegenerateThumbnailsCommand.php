@@ -30,7 +30,7 @@ class RegenerateThumbnailsCommand extends Command
     public function handle(): int
     {
         if (! $this->pdfThumbnailGenerator->isAvailable()) {
-            $this->warn('No PDF renderer available — PDFs will be left without a thumbnail. Install Ghostscript (brew install ghostscript) or set MEDIA_GHOSTSCRIPT_BINARY.');
+            $this->warn('No PDF renderer available — PDFs will be left without a thumbnail. Install Ghostscript (brew install ghostscript) or Poppler (brew install poppler), or set MEDIA_GHOSTSCRIPT_BINARY / MEDIA_PDFTOPPM_BINARY.');
         }
 
         $disk = config('media.disk');

@@ -12,10 +12,11 @@ use Throwable;
 /**
  * Rasterizes the first page of a PDF into a JPG thumbnail.
  *
- * The generator tries Ghostscript first and only falls back to the imagick PHP
+ * The generator tries Ghostscript first, then Poppler's `pdftoppm` (often
+ * installed anyway for `pdftotext`), and only falls back to the imagick PHP
  * extension when it happens to be installed — imagick renders PDFs through the
- * very same Ghostscript delegate, so nothing is gained by requiring it. Neither
- * renderer is a hard dependency: when both are missing the generator reports
+ * very same Ghostscript delegate, so nothing is gained by requiring it. No
+ * renderer is a hard dependency: when all are missing the generator reports
  * failure and the caller stores no thumbnail.
  */
 class PdfThumbnailGenerator
@@ -26,7 +27,7 @@ class PdfThumbnailGenerator
     private const RESOLUTION = 150;
 
     /**
-     * Directories probed for the Ghostscript binary on top of $PATH. PHP-FPM
+     * Directories probed for the renderer binaries on top of $PATH. PHP-FPM
      * and queue workers under Herd don't inherit Homebrew's PATH.
      */
     private const EXTRA_BINARY_PATHS = ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin'];
@@ -34,6 +35,10 @@ class PdfThumbnailGenerator
     private bool $ghostscriptResolved = false;
 
     private ?string $ghostscriptBinary = null;
+
+    private bool $pdftoppmResolved = false;
+
+    private ?string $pdftoppmBinary = null;
 
     /**
      * Render page 1 of $sourcePath into a JPG at $destinationPath.
@@ -46,13 +51,19 @@ class PdfThumbnailGenerator
             return $this->renderWithGhostscript($binary, $sourcePath, $destinationPath);
         }
 
+        $pdftoppm = $this->pdftoppmBinary();
+
+        if ($pdftoppm !== null) {
+            return $this->renderWithPdftoppm($pdftoppm, $sourcePath, $destinationPath);
+        }
+
         // imagick renders PDFs through the same Ghostscript delegate, so it is
         // only worth trying when no binary was found on the usual paths.
         if (extension_loaded('imagick')) {
             return $this->renderWithImagick($sourcePath, $destinationPath);
         }
 
-        Log::warning('PDF thumbnail generation failed: no PDF renderer available — install Ghostscript (brew install ghostscript / apt-get install ghostscript) or point media.ghostscript_binary at it.');
+        Log::warning('PDF thumbnail generation failed: no PDF renderer available — install Ghostscript (brew install ghostscript / apt-get install ghostscript) or Poppler (brew install poppler / apt-get install poppler-utils), or point media.ghostscript_binary / media.pdftoppm_binary at it.');
 
         return false;
     }
@@ -64,7 +75,7 @@ class PdfThumbnailGenerator
      */
     public function isAvailable(): bool
     {
-        if ($this->ghostscriptBinary() !== null) {
+        if ($this->ghostscriptBinary() !== null || $this->pdftoppmBinary() !== null) {
             return true;
         }
 
@@ -93,6 +104,30 @@ class PdfThumbnailGenerator
         $this->ghostscriptBinary = (new ExecutableFinder())->find('gs', null, self::EXTRA_BINARY_PATHS);
 
         return $this->ghostscriptBinary;
+    }
+
+    /**
+     * Resolve Poppler's pdftoppm binary from the config or the usual locations.
+     */
+    private function pdftoppmBinary(): ?string
+    {
+        if ($this->pdftoppmResolved) {
+            return $this->pdftoppmBinary;
+        }
+
+        $this->pdftoppmResolved = true;
+
+        $configured = config('media.pdftoppm_binary');
+
+        if (is_string($configured) && $configured !== '') {
+            $this->pdftoppmBinary = is_executable($configured) ? $configured : null;
+
+            return $this->pdftoppmBinary;
+        }
+
+        $this->pdftoppmBinary = (new ExecutableFinder())->find('pdftoppm', null, self::EXTRA_BINARY_PATHS);
+
+        return $this->pdftoppmBinary;
     }
 
     private function renderWithGhostscript(string $binary, string $sourcePath, string $destinationPath): bool
@@ -129,6 +164,54 @@ class PdfThumbnailGenerator
             @unlink($destinationPath);
 
             return false;
+        }
+
+        return $this->wroteUsableFile($destinationPath);
+    }
+
+    /**
+     * pdftoppm takes an output PREFIX and appends the extension itself, so the
+     * destination is handed over without its `.jpg`.
+     */
+    private function renderWithPdftoppm(string $binary, string $sourcePath, string $destinationPath): bool
+    {
+        $prefix = preg_replace('/\.jpe?g$/i', '', $destinationPath);
+
+        $process = new Process([
+            $binary,
+            '-f',
+            '1',
+            '-l',
+            '1',
+            '-singlefile',
+            '-jpeg',
+            '-jpegopt',
+            'quality=85',
+            '-r',
+            (string) self::RESOLUTION,
+            $sourcePath,
+            $prefix,
+        ]);
+
+        $process->setTimeout(60);
+
+        try {
+            $process->run();
+        } catch (Throwable $e) {
+            Log::warning('PDF thumbnail generation failed: ' . $e->getMessage());
+
+            return false;
+        }
+
+        if (! $process->isSuccessful()) {
+            Log::warning('PDF thumbnail generation failed: ' . mb_trim($process->getErrorOutput() ?: $process->getOutput()));
+            @unlink($destinationPath);
+
+            return false;
+        }
+
+        if ($prefix . '.jpg' !== $destinationPath && file_exists($prefix . '.jpg')) {
+            rename($prefix . '.jpg', $destinationPath);
         }
 
         return $this->wroteUsableFile($destinationPath);

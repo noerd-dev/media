@@ -78,6 +78,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Poppler pdftoppm Binary
+    |--------------------------------------------------------------------------
+    |
+    | The second PDF renderer, used when no Ghostscript is found. Leave empty to
+    | auto-detect pdftoppm on $PATH and the usual Homebrew/system locations.
+    |
+    */
+    'pdftoppm_binary' => env('MEDIA_PDFTOPPM_BINARY'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Image Variants
     |--------------------------------------------------------------------------
     |

@@ -137,7 +137,8 @@ this module.
   jobs) always pass it, together with `storeFromPath()` for trusted local files. Filenames are ASCII-sanitised (`Str::ascii(…, 'de')`)
 - PDF thumbnails are rasterised by `PdfThumbnailGenerator`: Ghostscript (`gs`, auto-detected on
   `$PATH` plus Homebrew paths, or `config('media.ghostscript_binary')` / `MEDIA_GHOSTSCRIPT_BINARY`)
-  first, the legacy `imagick` extension only as fallback. Neither is required — without a renderer
+  first, then Poppler's `pdftoppm` (same detection, `media.pdftoppm_binary` / `MEDIA_PDFTOPPM_BINARY`),
+  the legacy `imagick` extension only as fallback. None is required — without a renderer
   the PDF is stored WITHOUT a thumbnail and the library shows a file-type tile. Never make a
   renderer a hard dependency and never let a failed rasterisation abort the upload
 - Private media: `config('media.private')` (`MEDIA_PRIVATE`) relocates the `media` disk to
@@ -226,7 +227,8 @@ this module.
 - `MediaFactory::file($tenantId, $name, $folderId)` derives the path from the folder, so a fixture
   really sits where the library says it does — never hand-write a `path` in a fixture
 - PDF rendering is isolated: `tests/Support/FakeGhostscript` writes throwaway `gs` stubs
-  (`writingJpeg()`, a failing variant) and points `media.ghostscript_binary` at them;
+  (`writingJpeg()`, a failing variant) and points `media.ghostscript_binary` at them,
+  `tests/Support/FakePdftoppm` does the same for `media.pdftoppm_binary`;
   `tests/Support/PdfRendering::isWorking()` decides whether a real-renderer integration test skips
 - Usage guards are proven with an ad-hoc `MediaUsageRegistry::register('zz', …)` check
   (`MediaUsageGuardTest`) — the module tests without any consuming module; app folders the same

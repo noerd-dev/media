@@ -12,7 +12,7 @@ For full documentation, visit [noerd.dev](https://noerd.dev).
 
 - **Media Library** – Upload and manage files in a YAML-configured, searchable list view
 - **Folders & Tags** – Organize media into hierarchical folders and tag them for fast retrieval
-- **Thumbnails & Previews** – Automatic preview generation for images (Intervention Image) and, when Ghostscript is available, for PDFs
+- **Thumbnails & Previews** – Automatic preview generation for images (Intervention Image) and, when Ghostscript or Poppler is available, for PDFs
 - **MediaResolver** – A shared contract (`MediaResolverContract`) other modules use to store uploads and resolve preview URLs without depending on Media directly
 - **Multi-Tenant** – Every file is scoped to its tenant, on a dedicated `media` storage disk
 - **Custom Attributes** – Attach project-specific fields via the `custom_attributes` JSON column — no module changes required
@@ -48,20 +48,21 @@ MEDIA_DISK=media
 
 ### PDF thumbnails (optional)
 
-PDF thumbnails are rendered by rasterizing the first page with [Ghostscript](https://www.ghostscript.com/).
-The binary is auto-detected on `$PATH` (plus the usual Homebrew locations); point the config at it
-explicitly when it lives elsewhere:
+PDF thumbnails are rendered by rasterizing the first page with [Ghostscript](https://www.ghostscript.com/),
+or — when no Ghostscript is found — with Poppler's `pdftoppm`. Both binaries are auto-detected on `$PATH`
+(plus the usual Homebrew locations); point the config at one explicitly when it lives elsewhere:
 
 ```env
 MEDIA_GHOSTSCRIPT_BINARY=/opt/homebrew/bin/gs
+MEDIA_PDFTOPPM_BINARY=/opt/homebrew/bin/pdftoppm
 ```
 
 ```bash
-brew install ghostscript        # macOS
-apt-get install ghostscript     # Debian/Ubuntu
+brew install ghostscript        # macOS (or: brew install poppler)
+apt-get install ghostscript     # Debian/Ubuntu (or: apt-get install poppler-utils)
 ```
 
-Ghostscript is **not** required. Without it — and without the legacy `imagick` extension, which is used
+Neither renderer is **required**. Without both — and without the legacy `imagick` extension, which is used
 as a fallback when it happens to be installed — PDFs are stored without a thumbnail and the media
 library renders a file-type tile instead. Image thumbnails are unaffected; they run through Intervention
 Image's GD driver.
