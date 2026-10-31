@@ -100,7 +100,7 @@ it('filters media by multiple tags (AND)', function (): void {
     $component = Livewire::test('media::media-list')
         ->set('filterTagIds', [$tagA->id, $tagB->id]);
 
-    $rows = $component->viewData('listConfig')['rows'];
+    $rows = $component->instance()->listData()['rows'];
     $ids = collect($rows)->pluck('id');
 
     expect($ids)->toContain($m3->id);
@@ -213,7 +213,7 @@ it('searches media by name', function (): void {
     $unrelated = Media::factory()->file($tenantId, 'photo.jpg')->create();
 
     $component = Livewire::test('media::media-list')->set('search', 'invoice');
-    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
+    $ids = collect($component->instance()->listData()['rows'])->pluck('id');
 
     expect($ids)->toContain($match->id);
     expect($ids)->not->toContain($unrelated->id);
@@ -228,7 +228,7 @@ it('filters media by extension via the listFilters picklist', function (): void 
     $component = Livewire::test('media::media-list')
         ->set('listFilters.extension', 'pdf');
 
-    $ids = collect($component->viewData('listConfig')['rows'])->pluck('id');
+    $ids = collect($component->instance()->listData()['rows'])->pluck('id');
 
     expect($ids)->toContain($pdf->id);
     expect($ids)->not->toContain($jpg->id);
@@ -371,7 +371,7 @@ it('offers and hands out only images when the picker asks for an image', functio
         'selectKind' => 'image',
     ]);
 
-    expect($picker->viewData('listConfig')['rows']->pluck('id')->all())->toBe([$image->id]);
+    expect($picker->instance()->listData()['rows']->pluck('id')->all())->toBe([$image->id]);
 
     $picker->call('chooseMedia', $pdf->id)->assertNotDispatched('mediaSelected');
     $picker->call('chooseMedia', $image->id)->assertDispatched('mediaSelected', $image->id, 'productFile:image', 'token');

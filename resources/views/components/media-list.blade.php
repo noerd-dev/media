@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -58,36 +59,16 @@ new class extends Component {
         }
     }
 
-    /**
-     * Whether the user may work in this folder: the tenant scope and the app
-     * folder visibility scope decide — a hidden folder simply does not exist.
-     */
-    private function folderIsAccessible(int $folderId): bool
+    public function listData(): array
     {
-        return MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->whereKey($folderId)
-            ->exists();
+        $rows = $this->mediaQuery()->latest()->limit($this->perPage)->get();
+
+        return $this->buildList($rows);
     }
 
     public function with(): array
     {
-        $hasActiveFilters = $this->search !== ''
-            || count($this->filterTagIds) > 0
-            || collect($this->listFilters)->filter()->isNotEmpty();
-
-        $baseQuery = Media::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-            ->when(count($this->filterTagIds) > 0, function ($query): void {
-                foreach ($this->filterTagIds as $tagId) {
-                    $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));
-                }
-            })
-            ->tap(fn($query) => $this->applyListFilters($query))
-            ->when($this->picksImagesOnly(), fn($query) => $query->images())
-            // Folder context only applies when no search/filter is active (global search per UX choice)
-            ->when(! $hasActiveFilters, fn($query) => $query->where('folder_id', $this->currentFolderId));
-
-        $rows = (clone $baseQuery)->latest()->limit($this->perPage)->get();
+        $hasActiveFilters = $this->hasActiveMediaFilters();
 
         $currentFolder = $this->currentFolderId
             ? MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
@@ -124,10 +105,9 @@ new class extends Component {
             ->toArray();
 
         return [
-            'listConfig' => $this->buildList($rows),
             'tags' => $allTags,
             'availableTags' => $availableTags,
-            'totalCount' => (clone $baseQuery)->count(),
+            'totalCount' => $this->mediaQuery()->count(),
             'folders' => $folders,
             'breadcrumb' => $currentFolder?->breadcrumb() ?? [],
             'hasActiveFilters' => $hasActiveFilters,
@@ -277,11 +257,6 @@ new class extends Component {
         $this->selected = null;
     }
 
-    private function picksImagesOnly(): bool
-    {
-        return $this->selectMode && $this->selectKind === 'image';
-    }
-
     public function chooseMedia(int $id): void
     {
         if (! $this->selectMode) {
@@ -414,17 +389,6 @@ new class extends Component {
         $folder->forceFill(['allows_subfolders' => ! $folder->allowsSubfolders()])->save();
     }
 
-    private function folderTakesSubfolders(?int $folderId): bool
-    {
-        if ($folderId === null) {
-            return true;
-        }
-
-        $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
-
-        return $folder === null || $folder->allowsSubfolders();
-    }
-
     #[On('mediaFolderCreated')]
     public function refreshAfterFolderCreated(): void
     {
@@ -529,6 +493,63 @@ new class extends Component {
             'type' => 'Picklist',
             'options' => $options,
         ];
+    }
+
+    /**
+     * Whether the user may work in this folder: the tenant scope and the app
+     * folder visibility scope decide — a hidden folder simply does not exist.
+     */
+    private function folderIsAccessible(int $folderId): bool
+    {
+        return MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)
+            ->whereKey($folderId)
+            ->exists();
+    }
+
+    /**
+     * A search, a tag or a header filter searches the whole library instead of
+     * the open folder.
+     */
+    private function hasActiveMediaFilters(): bool
+    {
+        return $this->search !== ''
+            || count($this->filterTagIds) > 0
+            || collect($this->listFilters)->filter()->isNotEmpty();
+    }
+
+    /**
+     * The files the grid shows — shared by the rows (listData()) and the file
+     * count of the filter row (with()).
+     */
+    private function mediaQuery(): Builder
+    {
+        return Media::where('tenant_id', Auth::user()->selected_tenant_id)
+            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
+            ->when(count($this->filterTagIds) > 0, function ($query): void {
+                foreach ($this->filterTagIds as $tagId) {
+                    $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));
+                }
+            })
+            ->tap(fn($query) => $this->applyListFilters($query))
+            ->when($this->picksImagesOnly(), fn($query) => $query->images())
+            // Folder context only applies when no search/filter is active (global search per UX choice)
+            ->when(! $this->hasActiveMediaFilters(), fn($query) => $query->where('folder_id', $this->currentFolderId));
+    }
+
+    private function picksImagesOnly(): bool
+    {
+        return $this->selectMode && $this->selectKind === 'image';
+    }
+
+    private function folderTakesSubfolders(?int $folderId): bool
+    {
+        if ($folderId === null) {
+            return true;
+        }
+
+        $folder = MediaFolder::where('tenant_id', Auth::user()->selected_tenant_id)->find($folderId);
+
+        return $folder === null || $folder->allowsSubfolders();
     }
 } ?>
 
@@ -746,7 +767,7 @@ new class extends Component {
                         </button>
                     </div>
                 @endif
-                @foreach($listConfig['rows'] as $row)
+                @foreach($this->builtListConfig()['rows'] as $row)
                     @php
                         $isSelected = in_array($row->id, $selectedMediaIds, true);
                         $clickAction = $selectMode

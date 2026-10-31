@@ -15,7 +15,7 @@ use Throwable;
  * The media library must not know which modules exist (ModuleBoundaryTest
  * enforces that), so the question is asked outward rather than answered here. A
  * registration ceases to exist with its module — same reasoning as the noerd
- * core's PicklistRegistry and DetailSlotsRegistry.
+ * core's PicklistRegistry and ComponentSlotsRegistry.
  */
 class MediaUsageRegistry
 {

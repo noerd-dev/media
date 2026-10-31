@@ -6,8 +6,8 @@ namespace Noerd\Media\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
+use Noerd\Commands\Concerns\HasModuleInstallation;
 use Noerd\Media\Services\AppFolderService;
-use Noerd\Traits\HasModuleInstallation;
 
 class MediaInstallCommand extends Command
 {
