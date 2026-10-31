@@ -577,7 +577,7 @@ new class extends Component {
                  @@livewire-upload-error="uploadError = @js(__("Upload failed. The file may be too large for the server's upload limit."))"
                  @@livewire-upload-start="uploadError = ''"
                  @@livewire-upload-finish="uploadError = ''">
-                <livewire:dropzone
+                <livewire:noerd::dropzone
                     wire:model.live="files"
                     :rules="$this->uploadRules()"
                     :key="'files'"

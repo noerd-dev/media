@@ -126,7 +126,7 @@ this module.
   carries a lock icon, and `openCreateFolderModal()` refuses — a client-dispatched call reaches it
 
 ### Uploads and thumbnails
-- The upload UI is the core dropzone (`<livewire:dropzone wire:model.live="files" :rules="…">`,
+- The upload UI is the core dropzone (`<livewire:noerd::dropzone wire:model.live="files" :rules="…">`,
   shipped by `noerd/noerd`) inside `media-list`; the rules come from `uploadRules()` and are
   CONFIGURATION: `config('media.allowed_extensions')` and `config('media.max_upload_size')` (KB) in
   the project's published `config/media.php` — never widen the list in module code
