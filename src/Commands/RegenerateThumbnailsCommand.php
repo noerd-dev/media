@@ -10,6 +10,7 @@ use function Laravel\Prompts\progress;
 use Noerd\Media\Models\Media;
 use Noerd\Media\Services\ImagePreviewService;
 use Noerd\Media\Services\PdfThumbnailGenerator;
+use Noerd\Support\TenantContext;
 
 class RegenerateThumbnailsCommand extends Command
 {
@@ -42,7 +43,10 @@ class RegenerateThumbnailsCommand extends Command
             return $this->regenerateSingle((int) $this->option('id'));
         }
 
+        // Headless over every tenant: the selecting query lifts only the tenant
+        // scope, each file is then handled inside its own tenant.
         $query = Media::query()
+            ->acrossTenants()
             ->whereNotNull('path')
             ->where(function ($q): void {
                 foreach (ImagePreviewService::SUPPORTED_EXTENSIONS as $ext) {
@@ -74,10 +78,17 @@ class RegenerateThumbnailsCommand extends Command
                     return;
                 }
 
-                $newThumbPath = $this->imagePreviewService->regenerateThumbnail($media);
+                $newThumbPath = TenantContext::run((int) $media->tenant_id, function () use ($media): ?string {
+                    $newThumbPath = $this->imagePreviewService->regenerateThumbnail($media);
+
+                    if ($newThumbPath) {
+                        $media->update(['thumbnail' => $newThumbPath]);
+                    }
+
+                    return $newThumbPath;
+                });
 
                 if ($newThumbPath) {
-                    $media->update(['thumbnail' => $newThumbPath]);
                     $regenerated++;
                 } else {
                     $failed++;
@@ -98,7 +109,7 @@ class RegenerateThumbnailsCommand extends Command
 
     protected function regenerateSingle(int $id): int
     {
-        $media = Media::find($id);
+        $media = Media::query()->acrossTenants()->find($id);
 
         if (! $media) {
             $this->error("Media with ID {$id} not found.");
@@ -108,10 +119,17 @@ class RegenerateThumbnailsCommand extends Command
 
         $this->info("Regenerating thumbnail for media ID {$id}: {$media->name}");
 
-        $newThumbPath = $this->imagePreviewService->regenerateThumbnail($media);
+        $newThumbPath = TenantContext::run((int) $media->tenant_id, function () use ($media): ?string {
+            $newThumbPath = $this->imagePreviewService->regenerateThumbnail($media);
+
+            if ($newThumbPath) {
+                $media->update(['thumbnail' => $newThumbPath]);
+            }
+
+            return $newThumbPath;
+        });
 
         if ($newThumbPath) {
-            $media->update(['thumbnail' => $newThumbPath]);
             $this->info("Thumbnail regenerated: {$newThumbPath}");
 
             return self::SUCCESS;

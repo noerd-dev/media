@@ -113,6 +113,7 @@ it('filters nothing without a signed-in user', function (): void {
     $this->zzDenyFolderApp();
     auth()->logout();
 
-    expect(MediaFolder::find($this->folder->id))->not->toBeNull()
-        ->and(Media::find($this->file->id))->not->toBeNull();
+    // ofTenant() lifts only the tenant scope — the visibility scope stays.
+    expect(MediaFolder::query()->ofTenant($this->folder->tenant_id)->find($this->folder->id))->not->toBeNull()
+        ->and(Media::query()->ofTenant($this->file->tenant_id)->find($this->file->id))->not->toBeNull();
 });
