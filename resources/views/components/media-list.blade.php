@@ -15,6 +15,7 @@ use Noerd\Media\Models\MediaTag;
 use Noerd\Media\Services\AppFolderService;
 use Noerd\Media\Services\MediaMover;
 use Noerd\Media\Services\MediaUploadService;
+use Noerd\Support\ColumnFilterParser;
 use Noerd\Traits\NoerdList;
 
 new class extends Component {
@@ -524,7 +525,7 @@ new class extends Component {
     private function mediaQuery(): Builder
     {
         return Media::where('tenant_id', Auth::user()->selected_tenant_id)
-            ->when($this->search, fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
+            ->when($this->search, fn($query) => ColumnFilterParser::applyLikeContains($query, 'name', $this->search))
             ->when(count($this->filterTagIds) > 0, function ($query): void {
                 foreach ($this->filterTagIds as $tagId) {
                     $query->whereHas('tags', fn($q) => $q->where('media_tags.id', $tagId));

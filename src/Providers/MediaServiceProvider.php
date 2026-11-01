@@ -4,8 +4,6 @@ namespace Noerd\Media\Providers;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\ServiceProvider;
-use Livewire\Livewire;
 use Noerd\Contracts\MediaResolverContract;
 use Noerd\Events\TenantAppAssigned;
 use Noerd\Media\Commands\MediaClearVariantsCommand;
@@ -22,10 +20,24 @@ use Noerd\Media\Services\MediaMover;
 use Noerd\Media\Services\MediaPathService;
 use Noerd\Media\Services\MediaResolver;
 use Noerd\Media\Services\MediaUsageRegistry;
+use Noerd\Providers\NoerdModuleServiceProvider;
 
-class MediaServiceProvider extends ServiceProvider
+class MediaServiceProvider extends NoerdModuleServiceProvider
 {
-    public function register(): void
+    protected string $moduleKey = 'media';
+
+    protected array $commands = [
+        MediaInstallCommand::class,
+        MediaUpdateCommand::class,
+        RegenerateThumbnailsCommand::class,
+        MediaRelocateCommand::class,
+        MediaSyncCommand::class,
+        MediaClearVariantsCommand::class,
+    ];
+
+    protected array $configs = ['media'];
+
+    protected function registerModule(): void
     {
         $this->app->singleton(
             MediaResolverContract::class,
@@ -50,37 +62,11 @@ class MediaServiceProvider extends ServiceProvider
         $this->app->scoped(MediaMover::class);
     }
 
-    public function boot(): void
+    protected function bootModule(): void
     {
         Event::listen(TenantAppAssigned::class, EnsureAppFoldersOnAppAssignment::class);
 
-        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
-        $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'media');
-        Livewire::addNamespace('media', viewPath: __DIR__ . '/../../resources/views/components');
-        Livewire::addLocation(viewPath: __DIR__ . '/../../resources/views/components');
-        $this->loadTranslationsFrom(__DIR__ . '/../../resources/lang', 'media');
-        $this->loadJsonTranslationsFrom(__DIR__ . '/../../resources/lang');
-        $this->loadRoutesFrom(__DIR__ . '/../../routes/media-routes.php');
-
-        // Publish/merge configuration
-        $this->mergeConfigFrom(__DIR__ . '/../../config/media.php', 'media');
-
         $this->configurePrivateDisk();
-
-        $this->publishes([
-            __DIR__ . '/../../config/media.php' => config_path('media.php'),
-        ], 'media-config');
-
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                MediaInstallCommand::class,
-                MediaUpdateCommand::class,
-                RegenerateThumbnailsCommand::class,
-                MediaRelocateCommand::class,
-                MediaSyncCommand::class,
-                MediaClearVariantsCommand::class,
-            ]);
-        }
     }
 
     /**

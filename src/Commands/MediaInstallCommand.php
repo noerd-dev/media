@@ -13,17 +13,9 @@ class MediaInstallCommand extends Command
 {
     use HasModuleInstallation;
 
-    protected $signature = 'noerd:install-media
-                            {--force : Overwrite existing files without asking}
-                            {--migrate : Run migrations without asking (required to migrate in non-interactive runs)}
-                            {--build : Run npm build without asking (required to build in non-interactive runs)}';
+    protected $signature = 'noerd:install-media';
 
     protected $description = 'Install noerd media content and navigation';
-
-    public function handle(): int
-    {
-        return $this->runModuleInstallation();
-    }
 
     protected function getModuleName(): string
     {
@@ -33,11 +25,6 @@ class MediaInstallCommand extends Command
     protected function getModuleKey(): string
     {
         return 'media';
-    }
-
-    protected function getDefaultAppTitle(): string
-    {
-        return 'Media';
     }
 
     protected function getAppIcon(): string
