@@ -2,4 +2,4 @@
   name: pdm
   hidden: true
   route: pdm
-  block_menus: []
+  blockMenus: []
