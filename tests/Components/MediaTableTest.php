@@ -245,9 +245,8 @@ it('exposes an extension filter with the distinct extensions of the current tena
     $extensionFilter = collect($filters)->firstWhere('column', 'extension');
 
     expect($extensionFilter)->not->toBeNull();
-    // PHP casts a null array key to '' — that's the "All types" placeholder
-    // option used by Picklist filters (mirrors BankAccountFilterTrait).
-    expect(array_keys($extensionFilter['options']))->toBe(['', 'jpg', 'pdf', 'png']);
+    // The filter's label is the dropdown's "all" entry; the options are the extensions.
+    expect(array_keys($extensionFilter->toArray()['options']))->toBe(['jpg', 'pdf', 'png']);
 });
 
 it('omits the extension filter entirely when no media exists', function (): void {

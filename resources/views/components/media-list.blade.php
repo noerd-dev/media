@@ -16,6 +16,7 @@ use Noerd\Media\Services\AppFolderService;
 use Noerd\Media\Services\MediaMover;
 use Noerd\Media\Services\MediaUploadService;
 use Noerd\Support\ColumnFilterParser;
+use Noerd\Support\ListFilter;
 use Noerd\Traits\NoerdList;
 
 new class extends Component {
@@ -468,7 +469,7 @@ new class extends Component {
         }
     }
 
-    protected function getExtensionListFilter(): ?array
+    protected function getExtensionListFilter(): ?ListFilter
     {
         // Extensions are tenant-scoped automatically via Media's TenantScope.
         $extensions = Media::query()
@@ -483,17 +484,12 @@ new class extends Component {
             return null;
         }
 
-        $options = [null => __('All types')];
+        $options = [];
         foreach ($extensions as $extension) {
             $options[$extension] = '.' . mb_strtolower($extension);
         }
 
-        return [
-            'label' => __('Type'),
-            'column' => 'extension',
-            'type' => 'Picklist',
-            'options' => $options,
-        ];
+        return ListFilter::options(__('Type'), 'extension', $options);
     }
 
     /**
@@ -660,7 +656,7 @@ new class extends Component {
 
             {{-- Filters Row --}}
             @php
-                $tableFilters = $this->tableFilters();
+                $tableFilters = $this->headerFilters();
             @endphp
             <div class="px-4 pt-4 flex flex-wrap items-center gap-3">
                 {{-- The grid loads more tiles as the user scrolls, so the number of
